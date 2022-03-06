@@ -473,6 +473,7 @@ class VAETraining(SupervisedTemplate):
 
     def criterion(self):
         """Weighted Loss function according to the importance of new task."""
+        self.x_hat, self.mean, self.logvar = self.mb_output
         data_loss = (1/self.classes_until_now) * \
             self._criterion(self.mb_x[:self.mb_x.shape[0]//2], 
                             (self.x_hat[:self.mb_x.shape[0]//2], 

@@ -12,7 +12,7 @@ from typing import Optional, Sequence, List, Union
 
 import torch
 from torch.nn import Module, CrossEntropyLoss
-from torch.optim import Optimizer, SGD
+from torch.optim import Optimizer
 
 from avalanche.models.pnn import PNN
 from avalanche.training.plugins.evaluation import default_evaluator
@@ -400,7 +400,10 @@ class GenerativeReplay(SupervisedTemplate):
                 self.mb_output[self.train_mb_size:], 
                 self.mb_y[self.train_mb_size:])
         if torch.isnan(torch.tensor(loss)):
-            print(loss, "is nan. Classes: ", self.classes_until_now)
+            print("Classes: Compuatation: ", self.classes_until_now, (1/self.classes_until_now), self._criterion(self.mb_output[:self.train_mb_size], 
+                                                                                                                 self.mb_y[:self.train_mb_size]), (1-(1/self.classes_until_now)), self._criterion(
+                self.mb_output[self.train_mb_size:], 
+                self.mb_y[self.train_mb_size:]))
         return loss
 
 

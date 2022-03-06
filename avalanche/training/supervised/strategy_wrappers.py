@@ -468,7 +468,7 @@ class VAETraining(SupervisedTemplate):
 
     def criterion(self):
         """Loss function."""
-        x_hat, mean, logvar = self.mb_output
+        self.x_hat, self.mean, self.logvar = self.mb_output
         return (1/self.classes_until_now) * \
             self._criterion(self.mb_x[:self.train_mb_size], (self.x_hat[:self.train_mb_size], self.mean[:self.train_mb_size], self.logvar[:self.train_mb_size]) 
                             ) + \

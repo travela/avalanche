@@ -391,12 +391,12 @@ class GenerativeReplay(SupervisedTemplate):
         )
 
     def criterion(self):
-        """Loss function."""
+        """Weighted Loss function according to the importance of new task."""
         data_loss = (1/self.classes_until_now) * \
             self._criterion(self.mb_output[:self.mb_output.shape[0]//2], 
                             self.mb_y[:self.mb_output.shape[0]//2])
         replay_loss = 0
-        if self.classes_until_now >= 1:
+        if self.classes_until_now > 1:
             replay_loss = (1-(1/self.classes_until_now)) * \
                 self._criterion(
                     self.mb_output[self.mb_output.shape[0]//2:], 
@@ -472,7 +472,7 @@ class VAETraining(SupervisedTemplate):
         )
 
     def criterion(self):
-        """Loss function."""
+        """Weighted Loss function according to the importance of new task."""
         data_loss = (1/self.classes_until_now) * \
             self._criterion(self.mb_x[:self.mb_output.shape[0]//2], 
                             (self.x_hat[:self.mb_output.shape[0]//2], 
@@ -480,7 +480,7 @@ class VAETraining(SupervisedTemplate):
                              self.logvar[:self.mb_output.shape[0]//2]) 
                             ) 
         replay_loss = 0
-        if self.classes_until_now >= 1:
+        if self.classes_until_now > 1:
             replay_loss = (1-(1/self.classes_until_now)) * \
                 self._criterion(self.mb_x[self.mb_output.shape[0]//2:], 
                                 (self.x_hat[self.mb_output.shape[0]//2:], 

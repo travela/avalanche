@@ -90,6 +90,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         """
         self.classes_until_now.append(
             strategy.experience.classes_in_this_experience)
+        strategy.classes_until_now = len(self.classes_until_now)
 
         if self.untrained_solver:
             # The solver needs to be trained before labelling generated data and
@@ -99,8 +100,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
 
         # Sample data from generator
         memory = self.generator.generate(
-            len(strategy.adapted_dataset) *
-            (len(self.classes_until_now)-1)).to(strategy.device)
+            len(strategy.adapted_dataset)).to(strategy.device)
         # Label the generated data using the current solver model, 
         # in case there is a solver
         if not self.model_is_generator:
@@ -128,7 +128,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             strategy.adapted_dataset,
             memory,
             batch_size=batch_size,
-            batch_size_mem=batch_size_mem*(len(self.classes_until_now)-1),
+            batch_size_mem=batch_size_mem,
             task_balanced_dataloader=self.task_balanced_dataloader,
             num_workers=num_workers,
             shuffle=shuffle)

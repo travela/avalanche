@@ -389,6 +389,16 @@ class GenerativeReplay(SupervisedTemplate):
             **base_kwargs
         )
 
+    def criterion(self):
+        """Loss function."""
+        return (1/self.classes_until_now) * \
+            self._criterion(self.mb_output[:self.train_mb_size], 
+                            self.mb_y[:self.train_mb_size]) + \
+            (1-(1/self.classes_until_now)) * \
+            self._criterion(
+                self.mb_output[self.train_mb_size:], 
+                self.mb_y[self.train_mb_size:])
+
 
 class VAETraining(SupervisedTemplate):
     """VAETraining class
@@ -457,9 +467,14 @@ class VAETraining(SupervisedTemplate):
         )
 
     def criterion(self):
-        """Adapt input to criterion as needed to compute reconstruction loss 
-        and KL divergence. See default criterion VAELoss."""
-        return self._criterion(self.mb_x, self.mb_output)
+        """Loss function."""
+        x_hat, mean, logvar = self.mb_output
+        return (1/self.classes_until_now) * \
+            self._criterion(self.mb_x[:self.train_mb_size], (self.x_hat[:self.train_mb_size], self.mean[:self.train_mb_size], self.logvar[:self.train_mb_size]) 
+                            ) + \
+            (1-(1/self.classes_until_now)) * \
+            self._criterion(self.mb_x[self.train_mb_size:], (self.x_hat[self.train_mb_size:], self.mean[self.train_mb_size:], self.logvar[self.train_mb_size:]) 
+                            )
 
 
 class GSS_greedy(SupervisedTemplate):

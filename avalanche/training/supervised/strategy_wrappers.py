@@ -10,6 +10,7 @@
 ################################################################################
 from typing import Optional, Sequence, List, Union
 
+import torch
 from torch.nn import Module, CrossEntropyLoss
 from torch.optim import Optimizer, SGD
 
@@ -391,13 +392,16 @@ class GenerativeReplay(SupervisedTemplate):
 
     def criterion(self):
         """Loss function."""
-        return (1/self.classes_until_now) * \
+        loss = (1/self.classes_until_now) * \
             self._criterion(self.mb_output[:self.train_mb_size], 
                             self.mb_y[:self.train_mb_size]) + \
             (1-(1/self.classes_until_now)) * \
             self._criterion(
                 self.mb_output[self.train_mb_size:], 
                 self.mb_y[self.train_mb_size:])
+        if torch.isnan(torch.tensor(loss)):
+            print(loss, "is nan. Classes: ", self.classes_until_now)
+        return loss
 
 
 class VAETraining(SupervisedTemplate):

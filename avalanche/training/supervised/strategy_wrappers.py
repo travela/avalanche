@@ -451,6 +451,7 @@ class VAETraining(SupervisedTemplate):
         :param **base_kwargs: any additional
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
+        self.classes_until_now = 1
 
         super().__init__(
             model,
@@ -470,10 +471,16 @@ class VAETraining(SupervisedTemplate):
         """Loss function."""
         self.x_hat, self.mean, self.logvar = self.mb_output
         return (1/self.classes_until_now) * \
-            self._criterion(self.mb_x[:self.train_mb_size], (self.x_hat[:self.train_mb_size], self.mean[:self.train_mb_size], self.logvar[:self.train_mb_size]) 
+            self._criterion(self.mb_x[:self.train_mb_size], 
+                            (self.x_hat[:self.train_mb_size], 
+                            self.mean[:self.train_mb_size],
+                             self.logvar[:self.train_mb_size]) 
                             ) + \
             (1-(1/self.classes_until_now)) * \
-            self._criterion(self.mb_x[self.train_mb_size:], (self.x_hat[self.train_mb_size:], self.mean[self.train_mb_size:], self.logvar[self.train_mb_size:]) 
+            self._criterion(self.mb_x[self.train_mb_size:], 
+                            (self.x_hat[self.train_mb_size:], 
+                            self.mean[self.train_mb_size:], 
+                             self.logvar[self.train_mb_size:]) 
                             )
 
 

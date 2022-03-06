@@ -392,19 +392,18 @@ class GenerativeReplay(SupervisedTemplate):
 
     def criterion(self):
         """Loss function."""
-        loss = (1/self.classes_until_now) * \
-            self._criterion(self.mb_output[:self.train_mb_size], 
-                            self.mb_y[:self.train_mb_size]) + \
-            (1-(1/self.classes_until_now)) * \
-            self._criterion(
-                self.mb_output[self.train_mb_size:], 
-                self.mb_y[self.train_mb_size:])
-        if torch.isnan(torch.tensor(loss)):
-            print("Classes: Compuatation: ", self.classes_until_now, (1/self.classes_until_now), self._criterion(self.mb_output[:self.train_mb_size], 
-                                                                                                                 self.mb_y[:self.train_mb_size]), (1-(1/self.classes_until_now)), self._criterion(
-                self.mb_output[self.train_mb_size:], 
-                self.mb_y[self.train_mb_size:]))
-        return loss
+        data_loss = (1/self.classes_until_now) * \
+            self._criterion(self.mb_output[:self.mb_output.shape[0]//2], 
+                            self.mb_y[:self.mb_output.shape[0]//2])
+        replay_loss = 0
+        if self.classes_until_now >= 1:
+            replay_loss = (1-(1/self.classes_until_now)) * \
+                self._criterion(
+                    self.mb_output[self.mb_output.shape[0]//2:], 
+                    self.mb_y[self.mb_output.shape[0]//2:])
+        if torch.isnan(torch.tensor(replay_loss)):
+            print("Classes: : ", self.classes_until_now)
+        return data_loss + replay_loss
 
 
 class VAETraining(SupervisedTemplate):

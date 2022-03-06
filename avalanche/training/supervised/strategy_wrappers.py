@@ -401,8 +401,6 @@ class GenerativeReplay(SupervisedTemplate):
                 self._criterion(
                     self.mb_output[self.mb_output.shape[0]//2:], 
                     self.mb_y[self.mb_output.shape[0]//2:])
-        if torch.isnan(torch.tensor(replay_loss)):
-            print("Classes: : ", self.classes_until_now)
         return data_loss + replay_loss
 
 
@@ -475,19 +473,21 @@ class VAETraining(SupervisedTemplate):
 
     def criterion(self):
         """Loss function."""
-        self.x_hat, self.mean, self.logvar = self.mb_output
-        return (1/self.classes_until_now) * \
-            self._criterion(self.mb_x[:self.train_mb_size], 
-                            (self.x_hat[:self.train_mb_size], 
-                            self.mean[:self.train_mb_size],
-                             self.logvar[:self.train_mb_size]) 
-                            ) + \
-            (1-(1/self.classes_until_now)) * \
-            self._criterion(self.mb_x[self.train_mb_size:], 
-                            (self.x_hat[self.train_mb_size:], 
-                            self.mean[self.train_mb_size:], 
-                             self.logvar[self.train_mb_size:]) 
-                            )
+        data_loss = (1/self.classes_until_now) * \
+            self._criterion(self.mb_x[:self.mb_output.shape[0]//2], 
+                            (self.x_hat[:self.mb_output.shape[0]//2], 
+                            self.mean[:self.mb_output.shape[0]//2],
+                             self.logvar[:self.mb_output.shape[0]//2]) 
+                            ) 
+        replay_loss = 0
+        if self.classes_until_now >= 1:
+            replay_loss = (1-(1/self.classes_until_now)) * \
+                self._criterion(self.mb_x[self.mb_output.shape[0]//2:], 
+                                (self.x_hat[self.mb_output.shape[0]//2:], 
+                                 self.mean[self.mb_output.shape[0]//2:], 
+                                 self.logvar[self.mb_output.shape[0]//2:]) 
+                                )
+        return data_loss + replay_loss
 
 
 class GSS_greedy(SupervisedTemplate):

@@ -163,4 +163,6 @@ class trainGeneratorPlugin(SupervisedPlugin):
         The training method expects an Experience object 
         with a 'dataset' parameter.
         """
+        print("Start training of Replay Generator.")
         strategy.plugins[1].generator_strategy.train(strategy.experience) 
+        print("End training of Replay Generator.")

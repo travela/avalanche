@@ -475,7 +475,7 @@ class VAETraining(SupervisedTemplate):
 
     def criterion(self):
         """Weighted Loss function according to the importance of new task."""
-        data_memory_split_index = self.mb_output.shape[0]//2 if (
+        data_memory_split_index = self.mb_x.shape[0]//2 if (
             self.experience.current_experience > 0) else self.train_mb_size
 
         self.x_hat, self.mean, self.logvar = self.mb_output

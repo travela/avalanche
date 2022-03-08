@@ -88,9 +88,9 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         ReplayDataloader to build batches containing examples from both, 
         data sampled from the generator and the training dataset.
         """
-        self.classes_until_now.append(
+        self.classes_until_now.extend(
             strategy.experience.classes_in_this_experience)
-        strategy.classes_until_now = len(self.classes_until_now)
+        strategy.number_classes_until_now = len(set(self.classes_until_now))
 
         if self.untrained_solver:
             # The solver needs to be trained before labelling generated data and
@@ -109,7 +109,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                 memory_output = strategy.model(memory).argmax(dim=-1)
             strategy.model.train()
         else:
-            # Mock labels:
+            # Mock labels if there is no solver:
             memory_output = torch.zeros(memory.shape[0])
         # Create an AvalancheDataset from memory data and labels
         memory = AvalancheDataset(torch.utils.data.TensorDataset(

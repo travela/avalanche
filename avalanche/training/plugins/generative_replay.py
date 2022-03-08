@@ -69,7 +69,6 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             self.generator = None
         self.untrained_solver = untrained_solver
         self.model_is_generator = False
-        self.classes_until_now = []
 
     def before_training(self, strategy, *args, **kwargs):
         """Checks whether we are using a user defined external generator 
@@ -88,9 +87,8 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         ReplayDataloader to build batches containing examples from both, 
         data sampled from the generator and the training dataset.
         """
-        self.classes_until_now.extend(
-            strategy.experience.classes_in_this_experience)
-        strategy.number_classes_until_now = len(set(self.classes_until_now))
+        strategy.number_classes_until_now = len(
+            set(strategy.experience.classes_seen_so_far))
 
         if self.untrained_solver:
             # The solver needs to be trained before labelling generated data and

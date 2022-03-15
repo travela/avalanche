@@ -96,7 +96,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
 
         # Sample data from generator
         memory = self.generator.generate(
-            len(strategy.adapted_dataset))
+            2000)
         # Label the generated data using the current solver model, 
         # in case there is a solver
         if not self.model_is_generator:

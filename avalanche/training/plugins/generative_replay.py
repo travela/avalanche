@@ -135,7 +135,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             # Mock labels:
             replay_output = torch.zeros(replay.shape[0])
         strategy.mbatch[1] = torch.cat(
-            [strategy.mbatch[1], replay_output], dim=0)
+            [strategy.mbatch[1], replay_output.to(strategy.device)], dim=0)
         # set t (pro forma)
         strategy.mbatch[-1] = torch.cat([strategy.mbatch[-1], torch.ones(
             replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]],

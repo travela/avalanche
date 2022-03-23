@@ -96,13 +96,20 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         if self.untrained_solver:
             # The solver needs to be trained before labelling generated data and
             # the generator needs to be trained before we can sample.
-            self.untrained_solver = False
             return
         self.old_generator = deepcopy(self.generator)
         self.old_generator.eval()
         if not self.model_is_generator:
             self.old_model = deepcopy(strategy.model)
             self.old_model.eval()
+
+    def after_training_exp(self, strategy: "SupervisedTemplate",
+                           num_workers: int = 0, shuffle: bool = True,
+                           **kwargs):
+        """
+        Make deep copies of generator and solver before training new experience.
+        """
+        self.untrained_solver = False
 
     def before_training_iteration(self, strategy: "SupervisedTemplate",
                                   **kwargs):

@@ -107,27 +107,27 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                            num_workers: int = 0, shuffle: bool = True,
                            **kwargs):
         """
-        Make deep copies of generator and solver before training new experience.
+        Set untrained_solver boolean to False after (the first) experience,
+        in order to start training with replay data from the second experience.
         """
         self.untrained_solver = False
 
     def before_training_iteration(self, strategy: "SupervisedTemplate",
                                   **kwargs):
         """
-        Adding replay data to current minibatch before training_iteration
+        Generating and appending replay data to current minibatch before 
+        each training iteration.
         """
         if self.untrained_solver:
             # The solver needs to be trained before labelling generated data and
             # the generator needs to be trained before we can sample.
             return
-        # set X
+        # extend X with replay data
         replay = self.old_generator.generate(
             len(strategy.mbatch[0]) * (strategy.experience.current_experience)
             ).to(strategy.device)  
-        # to device, as this callback takes place after unpacking the minibatch
-
         strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
-        # set y
+        # extend y with predicted labels (or mock labels if model==generator)
         if not self.model_is_generator:
             with torch.no_grad():
                 replay_output = self.old_model(replay).argmax(dim=-1)
@@ -136,7 +136,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             replay_output = torch.zeros(replay.shape[0])
         strategy.mbatch[1] = torch.cat(
             [strategy.mbatch[1], replay_output.to(strategy.device)], dim=0)
-        # set t (pro forma)
+        # extend task id batch (we implicitley assume a task-free case)
         strategy.mbatch[-1] = torch.cat([strategy.mbatch[-1], torch.ones(
             replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]],
              dim=0)

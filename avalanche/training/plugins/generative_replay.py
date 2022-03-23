@@ -137,8 +137,9 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         strategy.mbatch[1] = torch.cat(
             [strategy.mbatch[1], replay_output], dim=0)
         # set t (pro forma)
-        strategy.mbatch[-1] = torch.cat([strategy.mbatch[-1], torch.full(
-            replay.shape[0], strategy.mbatch[-1][0])], dim=0)
+        strategy.mbatch[-1] = torch.cat([strategy.mbatch[-1], torch.ones(
+            replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]],
+             dim=0)
 
 
 class TrainGeneratorAfterExpPlugin(SupervisedPlugin):

@@ -118,7 +118,8 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         in order to start training with replay data from the second experience.
         """
         self.untrained_solver = False
-        self.replay_statistics.append(self.replay_statistics_exp)
+        if not self.untrained_solver:
+            self.replay_statistics.append(self.replay_statistics_exp)
 
     def before_training_iteration(self, strategy: "SupervisedTemplate",
                                   **kwargs):

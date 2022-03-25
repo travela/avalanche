@@ -124,7 +124,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             return
         # extend X with replay data
         replay = self.old_generator.generate(
-            len(strategy.mbatch[0]) * (strategy.experience.current_experience)
+            len(strategy.mbatch[0])
             ).to(strategy.device)  
         strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
         # extend y with predicted labels (or mock labels if model==generator)

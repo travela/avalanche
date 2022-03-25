@@ -77,6 +77,8 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         self.untrained_solver = untrained_solver
         self.model_is_generator = False
 
+        self.replay_statistics = []
+
     def before_training(self, strategy: "SupervisedTemplate", *args, **kwargs):
         """Checks whether we are using a user defined external generator 
         or we use the strategy's model as the generator. 
@@ -106,6 +108,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         if not self.model_is_generator:
             self.old_model = deepcopy(strategy.model)
             self.old_model.eval()
+        self.replay_statistics_exp = []
 
     def after_training_exp(self, strategy: "SupervisedTemplate",
                            num_workers: int = 0, shuffle: bool = True,
@@ -115,6 +118,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         in order to start training with replay data from the second experience.
         """
         self.untrained_solver = False
+        self.replay_statistics.append(self.replay_statistics_exp)
 
     def before_training_iteration(self, strategy: "SupervisedTemplate",
                                   **kwargs):
@@ -135,6 +139,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         if not self.model_is_generator:
             with torch.no_grad():
                 replay_output = self.old_model(replay).argmax(dim=-1)
+                self.replay_statistics_exp.extend(replay_output)
         else:
             # Mock labels:
             replay_output = torch.zeros(replay.shape[0])

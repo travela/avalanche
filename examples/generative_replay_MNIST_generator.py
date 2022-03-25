@@ -60,7 +60,7 @@ def main(args):
     # ---------
 
     # MODEL CREATION
-    model = VAE((1, 28, 28), nhid=2)
+    model = VAE((1, 28, 28), nhid=2, device=device)
 
     # choose some metrics and evaluation method
     interactive_logger = InteractiveLogger()

@@ -93,6 +93,10 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         """
         Make deep copies of generator and solver before training new experience.
         """
+        # For weighted loss criterion: store the number of classes seen so far
+        strategy.number_classes_until_now = len(
+            set(strategy.experience.classes_seen_so_far))
+
         if self.untrained_solver:
             # The solver needs to be trained before labelling generated data and
             # the generator needs to be trained before we can sample.

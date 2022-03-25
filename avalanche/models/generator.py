@@ -42,7 +42,6 @@ class Generator(BaseModel):
 ###########################
 # VARIATIONAL AUTOENCODER #
 ###########################
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class Flatten(nn.Module):
@@ -87,7 +86,7 @@ class MLP(nn.Module):
         return self.mlp(x)
 
 
-class Encoder(nn.Module):
+class VAEEncoder(nn.Module):
     '''
     Encoder part of the VAE, computer the latent represenations of the input.
 
@@ -96,7 +95,7 @@ class Encoder(nn.Module):
     '''
 
     def __init__(self, shape, latent_dim=128):
-        super(Encoder, self).__init__()
+        super(VAEEncoder, self).__init__()
         flattened_size = torch.Size(shape).numel()
         self.encode = nn.Sequential(
             Flatten(),
@@ -111,7 +110,7 @@ class Encoder(nn.Module):
         return x
 
 
-class Decoder(nn.Module):
+class VAEDecoder(nn.Module):
     '''
     Decoder part of the VAE. Reverses Encoder.
 
@@ -120,7 +119,7 @@ class Decoder(nn.Module):
     '''
 
     def __init__(self, shape, nhid=16):
-        super(Decoder, self).__init__()
+        super(VAEDecoder, self).__init__()
         flattened_size = torch.Size(shape).numel()
         self.shape = shape
         self.decode = nn.Sequential(
@@ -151,7 +150,7 @@ class VAE(Generator, nn.Module):
     More details can be found in: https://arxiv.org/abs/1809.10635
     '''
 
-    def __init__(self, shape, nhid=16, n_classes=10):
+    def __init__(self, shape, nhid=16, n_classes=10, device="cpu"):
         """
         :param shape: Shape of each input sample
         :param nhid: Dimension of latent space of Encoder.
@@ -160,11 +159,12 @@ class VAE(Generator, nn.Module):
         """
         super(VAE, self).__init__()
         self.dim = nhid
-        self.encoder = Encoder(shape, latent_dim=128)
+        self.device = device
+        self.encoder = VAEEncoder(shape, latent_dim=128)
         self.calc_mean = MLP([128, nhid], last_activation=False)
         self.calc_logvar = MLP([128, nhid], last_activation=False)
         self.classification = MLP([128, n_classes], last_activation=False)
-        self.decoder = Decoder(shape, nhid)
+        self.decoder = VAEDecoder(shape, nhid)
 
     def get_features(self, x):
         """
@@ -179,7 +179,8 @@ class VAE(Generator, nn.Module):
         else it is a batch of samples of size "batch_size". 
         """
         z = torch.randn((batch_size, self.dim)).to(
-            device) if batch_size else torch.randn((1, self.dim)).to(device)
+            self.device) if batch_size else torch.randn((1, self.dim)).to(
+                self.device)
         res = self.decoder(z)
         if not batch_size:
             res = res.squeeze(0)
@@ -189,7 +190,7 @@ class VAE(Generator, nn.Module):
         """
         VAE 'reparametrization trick'
         """
-        eps = torch.randn(mean.shape).to(device)
+        eps = torch.randn(mean.shape).to(self.device)
         sigma = 0.5 * torch.exp(logvar)
         return mean + eps * sigma
 
@@ -216,11 +217,16 @@ def VAE_loss(X, forward_output):
     This is the criterion for VAE training loop.
 
     :param X: Original input batch.
-    :param X_hat: Reconstructed input after subsequent Encoder and Decoder.
-    :param mean: mean of the VAE output distribution.
-    :param logvar: logvar of the VAE output distribution.
+    :param forward_output: Return value of a VAE.forward() call. 
+                Triplet consisting of (X_hat, mean. logvar), ie.
+                (Reconstructed input after subsequent Encoder and Decoder, 
+                mean of the VAE output distribution, 
+                logvar of the VAE output distribution)
     '''
     X_hat, mean, logvar = forward_output
     reconstruction_loss = MSE_loss(X_hat, X)
     KL_divergence = 0.5 * torch.sum(-1 - logvar + torch.exp(logvar) + mean**2)
     return reconstruction_loss + KL_divergence
+
+
+__all__ = ["VAE", "VAE_loss"]

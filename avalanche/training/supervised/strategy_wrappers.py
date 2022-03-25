@@ -21,7 +21,7 @@ from avalanche.training.plugins import (
     CWRStarPlugin,
     ReplayPlugin,
     GenerativeReplayPlugin,
-    trainGeneratorPlugin,
+    TrainGeneratorAfterExpPlugin,
     GDumbPlugin,
     LwFPlugin,
     AGEMPlugin,
@@ -290,8 +290,8 @@ class GenerativeReplay(SupervisedTemplate):
 
     The model parameter should contain the solver. As an optional input
     a generator can be wrapped in a trainable strategy 
-    and passed through generator_strategy. 
-    By default a simple VAE will be used as generator.
+    and passed to the generator_strategy parameter. By default a simple VAE will
+    be used as generator.
 
     For the case where the Generator is the model itself that is to be trained,
     please simply add the GenerativeReplayPlugin() when instantiating 
@@ -350,7 +350,7 @@ class GenerativeReplay(SupervisedTemplate):
         else:
             # By default we use a fully-connected VAE as the generator.
             # model:
-            generator = VAE((1, 28, 28), nhid=2)
+            generator = VAE((1, 28, 28), nhid=2, device=device)
             # optimzer:
             lr = 0.01
             from torch.optim import Adam
@@ -368,7 +368,7 @@ class GenerativeReplay(SupervisedTemplate):
 
         rp = GenerativeReplayPlugin(generator=self.generator_strategy)
 
-        tgp = trainGeneratorPlugin()
+        tgp = TrainGeneratorAfterExpPlugin()
 
         if plugins is None:
             plugins = [tgp, rp]
@@ -1141,6 +1141,8 @@ __all__ = [
     "PNNStrategy",
     "CWRStar",
     "Replay",
+    "GenerativeReplay",
+    "VAETraining",
     "GDumb",
     "LwF",
     "AGEM",

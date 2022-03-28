@@ -103,8 +103,9 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             # The solver needs to be trained before labelling generated data and
             # the generator needs to be trained before we can sample.
             return
-        self.old_generator = deepcopy(self.generator)
-        self.old_generator.eval()
+        # self.old_generator = deepcopy(self.generator)
+        # self.old_generator.eval()
+        strategy.trained_generators.append(deepcopy(self.generator).eval())
         if not self.model_is_generator:
             self.old_model = deepcopy(strategy.model)
             self.old_model.eval()
@@ -132,9 +133,12 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             # the generator needs to be trained before we can sample.
             return
         # extend X with replay data
-        replay = self.old_generator.generate(
-            len(strategy.mbatch[0])
-            ).to(strategy.device)  
+        replay = []
+        for g in strategy.trained_generators:
+            replay.append(g.generate(
+                strategy.train_mb_size // len(g)
+            ).to(strategy.device))
+        replay = torch.cat(replay)  
         strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
         # extend y with predicted labels (or mock labels if model==generator)
         if not self.model_is_generator:

@@ -390,21 +390,6 @@ class GenerativeReplay(SupervisedTemplate):
             **base_kwargs
         )
 
-    def criterion(self):
-        """Weighted Loss function according to the importance of new task."""
-        data_memory_split_index = self.mb_output.shape[0]//2 if (
-            self.number_classes_until_now > 1) else self.train_mb_size
-        data_loss = (1/self.number_classes_until_now) * \
-            self._criterion(self.mb_output[:data_memory_split_index], 
-                            self.mb_y[:data_memory_split_index])
-        replay_loss = 0
-        if self.number_classes_until_now > 1:
-            replay_loss = (1-(1/self.number_classes_until_now)) * \
-                self._criterion(
-                    self.mb_output[data_memory_split_index:], 
-                    self.mb_y[data_memory_split_index:])
-        return data_loss + replay_loss
-
 
 class VAETraining(SupervisedTemplate):
     """VAETraining class
@@ -474,26 +459,9 @@ class VAETraining(SupervisedTemplate):
         )
 
     def criterion(self):
-        """Weighted Loss function according to the importance of new task."""
-        data_memory_split_index = self.mb_x.shape[0]//2 if (
-            self.experience.current_experience > 0) else self.train_mb_size
-
-        self.x_hat, self.mean, self.logvar = self.mb_output
-        data_loss = (1/self.number_classes_until_now) * \
-            self._criterion(self.mb_x[:data_memory_split_index], 
-                            (self.x_hat[:data_memory_split_index], 
-                            self.mean[:data_memory_split_index],
-                             self.logvar[:data_memory_split_index]) 
-                            ) 
-        replay_loss = 0
-        if self.experience.current_experience > 0:
-            replay_loss = (1-(1/self.number_classes_until_now)) * \
-                self._criterion(self.mb_x[data_memory_split_index:], 
-                                (self.x_hat[data_memory_split_index:], 
-                                 self.mean[data_memory_split_index:], 
-                                 self.logvar[data_memory_split_index:]) 
-                                )
-        return data_loss + replay_loss
+        """Adapt input to criterion as needed to compute reconstruction loss 
+        and KL divergence. See default criterion VAELoss."""
+        return self._criterion(self.mb_x, self.mb_output)
 
 
 class GSS_greedy(SupervisedTemplate):

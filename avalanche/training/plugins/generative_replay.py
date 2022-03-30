@@ -136,7 +136,8 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         replay = []
         for g in strategy.trained_generators:
             replay.append(g.generate(
-                strategy.train_mb_size // len(strategy.trained_generators)
+                (strategy.train_mb_size // len(strategy.trained_generators)) *
+                (strategy.experience.current_experience)
             ).to(strategy.device))
         replay = torch.cat(replay)  
         strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)

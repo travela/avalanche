@@ -144,11 +144,11 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                 # Make sure samples are balanced per class
                 expected_num_samples_per_class = (
                     strategy.train_mb_size // len(
-                        strategy.experience.classes_seen_so_far))
+                        set(strategy.experience.classes_seen_so_far)))
                 # Check for each class if enough samples were generated
                 for class_name in set(
                         strategy.experience.classes_seen_so_far):
-                    while (len(
+                    while (sum(
                             replay_output == class_name)
                            < expected_num_samples_per_class):
                         replay = torch.cat([replay, self.old_generator.generate(

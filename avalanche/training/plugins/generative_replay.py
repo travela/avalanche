@@ -133,13 +133,41 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             return
         # extend X with replay data
         replay = self.old_generator.generate(
-            len(strategy.mbatch[0])
+            len(strategy.mbatch[0]) 
             ).to(strategy.device)  
         strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
         # extend y with predicted labels (or mock labels if model==generator)
         if not self.model_is_generator:
             with torch.no_grad():
                 replay_output = self.old_model(replay).argmax(dim=-1)
+
+                # Make sure samples are balanced per class
+                expected_num_samples_per_class = (
+                    strategy.train_mb_size // len(
+                        strategy.experience.classes_seen_so_far))
+                # Check for each class if enough samples were generated
+                for class_name in set(
+                        strategy.experience.classes_seen_so_far):
+                    while (len(
+                            replay_output == class_name)
+                           < expected_num_samples_per_class):
+                        replay = torch.cat([replay, self.old_generator.generate(
+                                len(strategy.mbatch[0]) 
+                                ).to(strategy.device)])
+                        replay_output = self.old_model(replay).argmax(dim=-1)
+                # Keep only a fix amount of samples per class
+                balanced_replay = []
+                balanced_replay_lables = []
+                for class_name in set(strategy.experience.classes_seen_so_far):
+                    balanced_replay.append(
+                        replay[
+                            replay_output == class_name]
+                        [:expected_num_samples_per_class])
+                    balanced_replay_lables.append(
+                        replay_output[replay_output == class_name]
+                        [:expected_num_samples_per_class])
+                replay = torch.cat(balanced_replay)
+                replay_output = torch.cat(balanced_replay_lables)
                 self.replay_statistics_exp.extend(replay_output)
         else:
             # Mock labels:

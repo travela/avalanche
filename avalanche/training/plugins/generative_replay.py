@@ -79,9 +79,9 @@ class GenerativeReplayPlugin(SupervisedPlugin):
 
         self.replay_statistics = []
 
-        # self.replay_for_generator = []
-        # self.replay_labels_for_generator = []
-        # self.iter_counter = 0
+        self.replay_for_generator = []
+        self.replay_labels_for_generator = []
+        self.iter_counter = 0
 
     def before_training(self, strategy: "SupervisedTemplate", *args, **kwargs):
         """Checks whether we are using a user defined external generator 

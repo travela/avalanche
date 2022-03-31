@@ -189,9 +189,9 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                 self.replay_statistics_exp.extend(replay_output)
                 self.replay_for_generator.append(replay)
                 self.replay_labels_for_generator.append(replay_output)
-        else:
+        # else:
             # Mock labels:
-            replay_output = torch.zeros(replay.shape[0])
+        #    replay_output = torch.zeros(replay.shape[0])
         if not self.model_is_generator:
             strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
             strategy.mbatch[1] = torch.cat(

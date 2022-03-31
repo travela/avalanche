@@ -152,8 +152,9 @@ class GenerativeReplayPlugin(SupervisedPlugin):
 
                 # Make sure samples are balanced per class
                 expected_num_samples_per_class = (
-                    strategy.train_mb_size // len(
-                        set(strategy.experience.classes_seen_so_far)))
+                    strategy.train_mb_size // (len(
+                        set(strategy.experience.classes_seen_so_far)) - len(
+                        set(strategy.experience.classes_in_this_experience))))
                 # Check for each class if enough samples were generated
                 for class_name in set(
                         strategy.experience.classes_seen_so_far):
@@ -194,7 +195,8 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                 self.replay_statistics_exp.extend(replay_output)
                 self.generator_strategy.plugins[0].replay_for_generator.append(
                     replay)
-                self.generator_strategy.plugins[0].replay_labels_for_generator.append(
+                self.generator_strategy.plugins[
+                    0].replay_labels_for_generator.append(
                     replay_output)
         # else:
             # Mock labels:
@@ -209,12 +211,16 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                 dim=0)
         else:
             strategy.mbatch[0] = torch.cat(
-                [strategy.mbatch[0], self.replay_for_generator[self.iter_counter]], dim=0)
+                [strategy.mbatch[0], 
+                 self.replay_for_generator[self.iter_counter]], dim=0)
             strategy.mbatch[1] = torch.cat(
-                [strategy.mbatch[1], self.replay_labels_for_generator[self.iter_counter].to(strategy.device)], dim=0)
+                [strategy.mbatch[1], 
+                 self.replay_labels_for_generator[self.iter_counter].to(
+                     strategy.device)], dim=0)
             # extend task id batch (we implicitley assume a task-free case)
             strategy.mbatch[-1] = torch.ones(
-                strategy.mbatch[0].shape[0]).to(strategy.device) * strategy.mbatch[-1][0]
+                strategy.mbatch[0].shape[0]).to(strategy.device
+                                                ) * strategy.mbatch[-1][0]
             self.iter_counter += 1
 
 

@@ -79,6 +79,10 @@ class GenerativeReplayPlugin(SupervisedPlugin):
 
         self.replay_statistics = []
 
+        self.replay_for_generator = []
+        self.replay_labels_for_generator = []
+        self.iter_counter = 0
+
     def before_training(self, strategy: "SupervisedTemplate", *args, **kwargs):
         """Checks whether we are using a user defined external generator 
         or we use the strategy's model as the generator. 
@@ -108,11 +112,11 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         if not self.model_is_generator:
             self.old_model = deepcopy(strategy.model)
             self.old_model.eval()
-        else:
-            self.iter_counter = 0
+
         self.replay_statistics_exp = []
         self.replay_for_generator = []
         self.replay_labels_for_generator = []
+        self.iter_counter = 0
 
     def after_training_exp(self, strategy: "SupervisedTemplate",
                            num_workers: int = 0, shuffle: bool = True,

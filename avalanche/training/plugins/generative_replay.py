@@ -155,6 +155,10 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                                 len(strategy.mbatch[0]) 
                                 ).to(strategy.device)])
                         replay_output = self.old_model(replay).argmax(dim=-1)
+                        print("Classes until now: ",
+                              strategy.experience.classes_seen_so_far,
+                              "Replay output set: ", 
+                              set(replay_output.detach().cpu().numpy()))
                 # Keep only a fix amount of samples per class
                 balanced_replay = []
                 balanced_replay_lables = []

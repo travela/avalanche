@@ -149,7 +149,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                 for class_name in set(
                         strategy.experience.classes_seen_so_far):
                     # Only relpay classes from previous experiences:
-                    if class_name in strategy.experience.classes_in_experience:
+                    if class_name in strategy.experience.classes_in_this_experience:
                         continue
                     # There should be an additional stopping criterion 
                     # (e.g. max expected_num_samples_per_class iterations)

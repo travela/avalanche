@@ -148,6 +148,11 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                 # Check for each class if enough samples were generated
                 for class_name in set(
                         strategy.experience.classes_seen_so_far):
+                    # Only relpay classes from previous experiences:
+                    if class_name in strategy.experience.classes_in_experience:
+                        continue
+                    # There should be an additional stopping criterion 
+                    # (e.g. max expected_num_samples_per_class iterations)
                     while (sum(
                             replay_output == class_name)
                            < expected_num_samples_per_class):
@@ -155,7 +160,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                                 len(strategy.mbatch[0]) 
                                 ).to(strategy.device)])
                         replay_output = self.old_model(replay).argmax(dim=-1)
-                        print("Classes until now: ",
+                        print("Checking:", class_name, "Classes until now: ",
                               strategy.experience.classes_seen_so_far,
                               "Replay output set: ", 
                               set(replay_output.detach().cpu().numpy()))

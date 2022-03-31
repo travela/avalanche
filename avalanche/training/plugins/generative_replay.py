@@ -149,21 +149,26 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                 for class_name in set(
                         strategy.experience.classes_seen_so_far):
                     # Only relpay classes from previous experiences:
-                    if class_name in strategy.experience.classes_in_this_experience:
+                    if class_name in \
+                            strategy.experience.classes_in_this_experience:
                         continue
                     # There should be an additional stopping criterion 
                     # (e.g. max expected_num_samples_per_class iterations)
-                    while (sum(
-                            replay_output == class_name)
-                           < expected_num_samples_per_class):
+                    balance_replay_iter = 0
+                    while (sum(replay_output == class_name)
+                           < expected_num_samples_per_class
+                           ) and (balance_replay_iter
+                                  < expected_num_samples_per_class):
                         replay = torch.cat([replay, self.old_generator.generate(
                                 len(strategy.mbatch[0]) 
                                 ).to(strategy.device)])
                         replay_output = self.old_model(replay).argmax(dim=-1)
+                        balance_replay_iter += 1
                         print("Checking:", class_name, "Classes until now: ",
                               strategy.experience.classes_seen_so_far,
                               "Replay output set: ", 
-                              set(replay_output.detach().cpu().numpy()))
+                              set(replay_output.detach().cpu().numpy()),
+                              "Iteration: ", balance_replay_iter)
                 # Keep only a fix amount of samples per class
                 balanced_replay = []
                 balanced_replay_lables = []

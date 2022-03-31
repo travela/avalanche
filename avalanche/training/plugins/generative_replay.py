@@ -108,7 +108,11 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         if not self.model_is_generator:
             self.old_model = deepcopy(strategy.model)
             self.old_model.eval()
+        else:
+            self.iter_counter = 0
         self.replay_statistics_exp = []
+        self.replay_for_generator = []
+        self.replay_labels_for_generator = []
 
     def after_training_exp(self, strategy: "SupervisedTemplate",
                            num_workers: int = 0, shuffle: bool = True,
@@ -131,13 +135,13 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             # The solver needs to be trained before labelling generated data and
             # the generator needs to be trained before we can sample.
             return
-        # extend X with replay data
-        replay = self.old_generator.generate(
-            len(strategy.mbatch[0]) 
-            ).to(strategy.device)  
 
         # extend y with predicted labels (or mock labels if model==generator)
         if not self.model_is_generator:
+            # extend X with replay data
+            replay = self.old_generator.generate(
+                len(strategy.mbatch[0]) 
+            ).to(strategy.device)  
             with torch.no_grad():
                 replay_output = self.old_model(replay).argmax(dim=-1)
 
@@ -183,16 +187,28 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                 replay = torch.cat(balanced_replay)
                 replay_output = torch.cat(balanced_replay_lables)
                 self.replay_statistics_exp.extend(replay_output)
+                self.replay_for_generator.append(replay)
+                self.replay_labels_for_generator.append(replay_output)
         else:
             # Mock labels:
             replay_output = torch.zeros(replay.shape[0])
-        strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
-        strategy.mbatch[1] = torch.cat(
-            [strategy.mbatch[1], replay_output.to(strategy.device)], dim=0)
-        # extend task id batch (we implicitley assume a task-free case)
-        strategy.mbatch[-1] = torch.cat([strategy.mbatch[-1], torch.ones(
-            replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]],
-             dim=0)
+        if not self.model_is_generator:
+            strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
+            strategy.mbatch[1] = torch.cat(
+                [strategy.mbatch[1], replay_output.to(strategy.device)], dim=0)
+            # extend task id batch (we implicitley assume a task-free case)
+            strategy.mbatch[-1] = torch.cat([strategy.mbatch[-1], torch.ones(
+                replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]],
+                dim=0)
+        else:
+            strategy.mbatch[0] = torch.cat(
+                [strategy.mbatch[0], self.replay_for_generator[self.iter_counter]], dim=0)
+            strategy.mbatch[1] = torch.cat(
+                [strategy.mbatch[1], self.replay_labels_for_generator[self.iter_counter].to(strategy.device)], dim=0)
+            # extend task id batch (we implicitley assume a task-free case)
+            strategy.mbatch[-1] = torch.ones(
+                strategy.mbatch[0].shape[0]).to(strategy.device) * strategy.mbatch[-1][0]
+            self.iter_counter += 1
 
 
 class TrainGeneratorAfterExpPlugin(SupervisedPlugin):

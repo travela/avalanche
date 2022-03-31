@@ -112,6 +112,8 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         if not self.model_is_generator:
             self.old_model = deepcopy(strategy.model)
             self.old_model.eval()
+            self.replay_for_generator = []
+            self.replay_labels_for_generator = []
         else:
             self.replay_for_generator = strategy.replay_for_generator
             self.replay_labels_for_generator = strategy.replay_labels_for_generator

@@ -128,6 +128,9 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         """
         if not self.untrained_solver:
             self.replay_statistics.append(self.replay_statistics_exp)
+        if self.model_is_generator:
+            self.replay_for_generator = []
+            self.replay_labels_for_generator = []
         self.untrained_solver = False
 
     def before_training_iteration(self, strategy: "SupervisedTemplate",
@@ -174,11 +177,6 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                                 ).to(strategy.device)])
                         replay_output = self.old_model(replay).argmax(dim=-1)
                         balance_replay_iter += 1
-                        print("Checking:", class_name, "Classes until now: ",
-                              strategy.experience.classes_seen_so_far,
-                              "Replay output set: ", 
-                              set(replay_output.detach().cpu().numpy()),
-                              "Iteration: ", balance_replay_iter)
                 # Keep only a fix amount of samples per class
                 balanced_replay = []
                 balanced_replay_lables = []

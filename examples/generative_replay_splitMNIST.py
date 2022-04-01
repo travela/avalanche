@@ -3,8 +3,8 @@
 # Copyrights licensed under the MIT License.                                   #
 # See the accompanying LICENSE file for terms.                                 #
 #                                                                              #
-# Date: 12-10-2020                                                             #
-# Author(s): Vincenzo Lomonaco                                                 #
+# Date: 01-04-2022                                                             #
+# Author(s): Florian Mies                                                      #
 # E-mail: contact@continualai.org                                              #
 # Website: avalanche.continualai.org                                           #
 ################################################################################
@@ -16,8 +16,10 @@ This is a simple example on how to use the Replay strategy.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-
+# TO RUN LOCALLY
+import sys
+sys.path.append("/home/florian/university/WS2021/ma/avalanche/fork/avalanche")
+# REMOVE AFTER DEBUGGING
 import argparse
 import torch
 from torch.nn import CrossEntropyLoss
@@ -100,6 +102,7 @@ def main(args):
 
         print("Computing accuracy on the whole test set")
         results.append(cl_strategy.eval(scenario.test_stream))
+        print(results[-1])
 
 
 if __name__ == "__main__":

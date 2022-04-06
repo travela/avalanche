@@ -57,7 +57,8 @@ def main(args):
         train_mb_size=100,
         train_epochs=4,
         device=device,
-        plugins=[GenerativeReplayPlugin(increasing_replay_size=True)]
+        plugins=[GenerativeReplayPlugin()],
+        weighted_loss=True,
     )
 
     # TRAINING LOOP

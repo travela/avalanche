@@ -317,6 +317,7 @@ class GenerativeReplay(SupervisedTemplate):
         generator_strategy: BaseTemplate = None,
         replay_size: int = None,
         increasing_replay_size: bool = False,
+        weighted_loss: bool = False,
         **base_kwargs
     ):
         """
@@ -369,12 +370,15 @@ class GenerativeReplay(SupervisedTemplate):
                 eval_mb_size=eval_mb_size, device=device,
                 plugins=[GenerativeReplayPlugin(
                     replay_size=replay_size,
-                    increasing_replay_size=increasing_replay_size)])
+                    increasing_replay_size=increasing_replay_size,
+                    )],
+                weighted_loss=weighted_loss)
 
         rp = GenerativeReplayPlugin(
             generator_strategy=self.generator_strategy,
             replay_size=replay_size,
-            increasing_replay_size=increasing_replay_size)
+            increasing_replay_size=increasing_replay_size,
+            )
 
         tgp = TrainGeneratorAfterExpPlugin()
 
@@ -384,6 +388,7 @@ class GenerativeReplay(SupervisedTemplate):
             plugins.append(tgp)
             plugins.append(rp)
 
+        self.weighted_loss = weighted_loss
         super().__init__(
             model,
             optimizer,
@@ -400,18 +405,21 @@ class GenerativeReplay(SupervisedTemplate):
 
     def criterion(self):
         """Weighted Loss function according to the importance of new task."""
-        data_memory_split_index = self.mb_output.shape[0]//2 if (
-            self.number_classes_until_now > 1) else self.train_mb_size
-        data_loss = (1/self.number_classes_until_now) * \
-            self._criterion(self.mb_output[:data_memory_split_index], 
-                            self.mb_y[:data_memory_split_index])
-        replay_loss = 0
-        if self.number_classes_until_now > 1:
-            replay_loss = (1-(1/self.number_classes_until_now)) * \
-                self._criterion(
-                    self.mb_output[data_memory_split_index:], 
-                    self.mb_y[data_memory_split_index:])
-        return data_loss + replay_loss
+        if self.weighted_loss:
+            data_memory_split_index = self.mb_output.shape[0]//2 if (
+                self.number_classes_until_now > 1) else self.train_mb_size
+            data_loss = (1/self.number_classes_until_now) * \
+                self._criterion(self.mb_output[:data_memory_split_index], 
+                                self.mb_y[:data_memory_split_index])
+            replay_loss = 0
+            if self.number_classes_until_now > 1:
+                replay_loss = (1-(1/self.number_classes_until_now)) * \
+                    self._criterion(
+                        self.mb_output[data_memory_split_index:], 
+                        self.mb_y[data_memory_split_index:])
+            return data_loss + replay_loss
+        else:
+            self._criterion(self.mb_output, self.mb_y)
 
 
 class VAETraining(SupervisedTemplate):
@@ -442,6 +450,7 @@ class VAETraining(SupervisedTemplate):
             suppress_warnings=True,
             ),
         eval_every=-1,
+        weighted_loss: bool = False,
         **base_kwargs
     ):
         """
@@ -466,7 +475,7 @@ class VAETraining(SupervisedTemplate):
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
         self.number_classes_until_now = 1
-
+        self.weighted_loss = weighted_loss
         super().__init__(
             model,
             optimizer,
@@ -483,25 +492,28 @@ class VAETraining(SupervisedTemplate):
 
     def criterion(self):
         """Weighted Loss function according to the importance of new task."""
-        data_memory_split_index = self.mb_x.shape[0]//2 if (
-            self.experience.current_experience > 0) else self.train_mb_size
+        if self.weighted_loss:
+            data_memory_split_index = self.mb_x.shape[0]//2 if (
+                self.experience.current_experience > 0) else self.train_mb_size
 
-        self.x_hat, self.mean, self.logvar = self.mb_output
-        data_loss = (1/self.number_classes_until_now) * \
-            self._criterion(self.mb_x[:data_memory_split_index], 
-                            (self.x_hat[:data_memory_split_index], 
-                            self.mean[:data_memory_split_index],
-                             self.logvar[:data_memory_split_index]) 
-                            ) 
-        replay_loss = 0
-        if self.experience.current_experience > 0:
-            replay_loss = (1-(1/self.number_classes_until_now)) * \
-                self._criterion(self.mb_x[data_memory_split_index:], 
-                                (self.x_hat[data_memory_split_index:], 
-                                 self.mean[data_memory_split_index:], 
-                                 self.logvar[data_memory_split_index:]) 
-                                )
-        return data_loss + replay_loss
+            self.x_hat, self.mean, self.logvar = self.mb_output
+            data_loss = (1/self.number_classes_until_now) * \
+                self._criterion(self.mb_x[:data_memory_split_index], 
+                                (self.x_hat[:data_memory_split_index], 
+                                self.mean[:data_memory_split_index],
+                                self.logvar[:data_memory_split_index]) 
+                                ) 
+            replay_loss = 0
+            if self.experience.current_experience > 0:
+                replay_loss = (1-(1/self.number_classes_until_now)) * \
+                    self._criterion(self.mb_x[data_memory_split_index:], 
+                                    (self.x_hat[data_memory_split_index:], 
+                                    self.mean[data_memory_split_index:], 
+                                    self.logvar[data_memory_split_index:]) 
+                                    )
+            return data_loss + replay_loss
+        else:
+            return self._criterion(self.mb_x, self.mb_output)
 
 
 class GSS_greedy(SupervisedTemplate):

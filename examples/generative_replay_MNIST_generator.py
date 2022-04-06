@@ -16,7 +16,10 @@ This is a simple example on how to use the Replay strategy.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
+# TO RUN LOCALLY
+import sys
+sys.path.append("/home/florian/university/WS2021/ma/avalanche/fork/avalanche")
+# REMOVE AFTER DEBUGGING
 import argparse
 import torch
 from torch.nn import CrossEntropyLoss
@@ -54,7 +57,7 @@ def main(args):
         train_mb_size=100,
         train_epochs=4,
         device=device,
-        plugins=[GenerativeReplayPlugin()]
+        plugins=[GenerativeReplayPlugin(increasing_replay_size=True)]
     )
 
     # TRAINING LOOP

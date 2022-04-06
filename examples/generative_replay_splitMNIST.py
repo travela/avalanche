@@ -16,7 +16,10 @@ This is a simple example on how to use the Replay strategy.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
+# TO RUN LOCALLY
+import sys
+sys.path.append("/home/florian/university/WS2021/ma/avalanche/fork/avalanche")
+# REMOVE AFTER DEBUGGING
 
 import argparse
 import torch

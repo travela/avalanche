@@ -315,6 +315,7 @@ class GenerativeReplay(SupervisedTemplate):
         evaluator: EvaluationPlugin = default_evaluator,
         eval_every=-1,
         generator_strategy: BaseTemplate = None,
+        untrained_solver: bool = True,
         replay_size: int = None,
         increasing_replay_size: bool = False,
         weighted_loss: bool = False,
@@ -376,6 +377,7 @@ class GenerativeReplay(SupervisedTemplate):
 
         rp = GenerativeReplayPlugin(
             generator_strategy=self.generator_strategy,
+            untrained_solver=untrained_solver,
             replay_size=replay_size,
             increasing_replay_size=increasing_replay_size,
             )
@@ -419,7 +421,7 @@ class GenerativeReplay(SupervisedTemplate):
                         self.mb_y[data_memory_split_index:])
             return data_loss + replay_loss
         else:
-            self._criterion(self.mb_output, self.mb_y)
+            return self._criterion(self.mb_output, self.mb_y)
 
 
 class VAETraining(SupervisedTemplate):

@@ -63,12 +63,12 @@ def main(args):
 
     # TRAINING LOOP
     print("Starting experiment...")
-    f, axarr = plt.subplots(scenario.n_experiences, 10)
+    f, axarr = plt.subplots(10, 10)
     k = 0
-    for experience in scenario.train_stream:
+    for k in range(10):
         print("Start of experience ",
-              experience.current_experience)
-        cl_strategy.train(experience)
+              k)
+        cl_strategy.train(scenario.train_stream[0])
         print("Training completed")
 
         samples = model.generate(10)

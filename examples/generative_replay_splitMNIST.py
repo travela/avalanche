@@ -48,7 +48,7 @@ def main(args):
     )
 
     # --- SCENARIO CREATION
-    scenario = SplitMNIST(n_experiences=10, seed=1234)
+    scenario = SplitMNIST(n_experiences=1, seed=1234)
     # ---------
 
     # MODEL CREATION
@@ -81,6 +81,13 @@ def main(args):
     # TRAINING LOOP
     print("Starting experiment...")
     results = []
+    for experience in scenario.train_stream:
+        print("Start of experience ", experience.current_experience)
+        cl_strategy.train(experience)
+        print("Training completed")
+
+        print("Computing accuracy on the whole test set")
+        results.append(cl_strategy.eval(scenario.test_stream))
     for experience in scenario.train_stream:
         print("Start of experience ", experience.current_experience)
         cl_strategy.train(experience)

@@ -65,9 +65,9 @@ def main(args):
     print("Starting experiment...")
     f, axarr = plt.subplots(10, 10)
     k = 0
-    for k in range(10):
+    for exp in range(10):
         print("Start of experience ",
-              k)
+              exp)
         cl_strategy.train(scenario.train_stream[0])
         print("Training completed")
 

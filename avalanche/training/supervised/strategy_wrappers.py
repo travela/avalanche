@@ -355,7 +355,7 @@ class GenerativeReplay(SupervisedTemplate):
         else:
             # By default we use a fully-connected VAE as the generator.
             # model:
-            generator = MlpVAE((1, 28, 28), nhid=2, device=device)
+            generator = MlpVAE((1, 28, 28), nhid=4, device=device)
             # optimzer:
             lr = 0.01
             from torch.optim import Adam

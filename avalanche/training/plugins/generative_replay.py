@@ -70,6 +70,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         self.increasing_replay_size = increasing_replay_size
 
         self.replay_statistics = []
+        self.losses = []
 
     def before_training(self, strategy: "SupervisedTemplate", *args, **kwargs):
         """Checks whether we are using a user defined external generator 
@@ -92,6 +93,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         # For weighted loss criterion: store the number of classes seen so far
         strategy.number_classes_until_now = len(
             set(strategy.experience.classes_seen_so_far))
+        self.losses_exp = []
 
         if self.untrained_solver:
             # The solver needs to be trained before labelling generated data and
@@ -111,9 +113,24 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         Set untrained_solver boolean to False after (the first) experience,
         in order to start training with replay data from the second experience.
         """
+        self.losses.append(self.losses_exp)
         if not self.untrained_solver:
             self.replay_statistics.append(self.replay_statistics_exp)
         self.untrained_solver = False
+
+    def before_training_epoch(self, strategy: "SupervisedTemplate",
+                              **kwargs):
+        """
+        Initializing empty list to stay losses of epoch.
+        """
+        self.losses_epoch = []
+
+    def after_training_epoch(self, strategy: "SupervisedTemplate",
+                             **kwargs):
+        """
+        Appending losses of epoch to list of losses of current experience.
+        """
+        self.losses_exp.append(self.losses_epoch)
 
     def before_training_iteration(self, strategy: "SupervisedTemplate",
                                   **kwargs):
@@ -153,6 +170,13 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         strategy.mbatch[-1] = torch.cat([strategy.mbatch[-1], torch.ones(
             replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]],
              dim=0)
+
+    def after_training_iteration(self, strategy: "SupervisedTemplate",
+                                 **kwargs):
+        """
+        Adding the loss of current iteration to th elist of losses of the epoch.
+        """
+        self.losses_epoch.append(strategy.loss.item())
 
 
 class TrainGeneratorAfterExpPlugin(SupervisedPlugin):

@@ -36,7 +36,7 @@ from avalanche.training.plugins import (
 )
 from avalanche.training.templates.base import BaseTemplate
 from avalanche.training.templates.supervised import SupervisedTemplate
-from avalanche.models.generator import MlpVAE, VAE_loss, VAE
+from avalanche.models.generator import MlpVAE, VAE_loss
 from avalanche.logging import InteractiveLogger
 
 

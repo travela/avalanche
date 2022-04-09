@@ -59,13 +59,12 @@ class VAEMLPEncoder(nn.Module):
         super(VAEMLPEncoder, self).__init__()
         flattened_size = torch.Size(shape).numel()
         self.encode = nn.Sequential(
-            nn.Conv2d(1, 16, 5, padding=0), nn.BatchNorm2d(
-                16), nn.ReLU(inplace=True),
-            nn.Conv2d(16, 32, 5, padding=0), nn.BatchNorm2d(
-                32), nn.ReLU(inplace=True),
             Flatten(),
-            MLP([12800, 400, latent_dim]),
-        )
+            nn.Linear(in_features=flattened_size, out_features=400),
+            nn.BatchNorm1d(400),
+            nn.LeakyReLU(),
+            MLP([400, latent_dim])
+                                   )
 
     def forward(self, x, y=None):
         x = self.encode(x)

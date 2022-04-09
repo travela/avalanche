@@ -133,7 +133,8 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         # extend X with replay data
         replay = self.old_generator.generate(number_replays_to_generate
                                              ).to(strategy.device)  
-        strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
+        strategy.mbatch[0] = replay
+
         # extend y with predicted labels (or mock labels if model==generator)
         if not self.model_is_generator:
             with torch.no_grad():
@@ -141,12 +142,10 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         else:
             # Mock labels:
             replay_output = torch.zeros(replay.shape[0])
-        strategy.mbatch[1] = torch.cat(
-            [strategy.mbatch[1], replay_output.to(strategy.device)], dim=0)
+        strategy.mbatch[1] = replay_output.to(strategy.device)
         # extend task id batch (we implicitley assume a task-free case)
-        strategy.mbatch[-1] = torch.cat([strategy.mbatch[-1], torch.ones(
-            replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]],
-             dim=0)
+        strategy.mbatch[-1] = torch.ones(
+            replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]
 
 
 class TrainGeneratorAfterExpPlugin(SupervisedPlugin):

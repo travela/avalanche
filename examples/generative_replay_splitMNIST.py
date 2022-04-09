@@ -48,7 +48,7 @@ def main(args):
     )
 
     # --- SCENARIO CREATION
-    scenario = SplitMNIST(n_experiences=10, seed=1234)
+    scenario = SplitMNIST(n_experiences=1, seed=1234)
     # ---------
 
     # MODEL CREATION
@@ -81,14 +81,39 @@ def main(args):
     # TRAINING LOOP
     print("Starting experiment...")
     results = []
-    for experience in scenario.train_stream:
-        print("Start of experience ", experience.current_experience)
-        cl_strategy.train(experience)
-        print("Training completed")
 
-        print("Computing accuracy on the whole test set")
-        results.append(cl_strategy.eval(scenario.test_stream))
+    import matplotlib.pyplot as plt
+    import numpy as np
+    iterations = 10
+    f, axarr = plt.subplots(iterations, 10)
+    k = 0
+    for exp in range(iterations):
+        print("Start of experience ",
+              exp)
+        # Reinit solver after each exp
+        # cl_strategy.model = SimpleMLP(num_classes=scenario.n_classes)
+        cl_strategy.train(scenario.train_stream[0])
+        results.append(cl_strategy.eval(scenario.test_stream[0]))
+        samples = cl_strategy.generator_strategy.model.generate(10)
+        samples = samples.detach().cpu().numpy()
+        for j in range(10):
+            axarr[k, j].imshow(samples[j, 0], cmap="gray")
+            axarr[k, 4].set_title("Generated images for experience " + str(k))
+        np.vectorize(lambda ax: ax.axis('off'))(axarr)
+        k += 1
 
+    import pickle
+    with open('results_mlvae_no_init_hid16_10iter.pkl', 'wb') as file:
+        pickle.dump(results, file)
+    print(results)
+    f.subplots_adjust(hspace=1.2)
+    plt.savefig("VAE_mlp_no_init_hid16_10iter")
+    plt.show()
+
+
+""" import pickle
+with open("results.pkl", 'rb') as f:
+    res = pickle.load(f) """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

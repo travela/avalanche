@@ -76,6 +76,7 @@ def main(args):
         eval_mb_size=100,
         device=device,
         evaluator=eval_plugin,
+        weighted_loss=True
     )
 
     # TRAINING LOOP
@@ -84,7 +85,7 @@ def main(args):
 
     import matplotlib.pyplot as plt
     import numpy as np
-    iterations = 10
+    iterations = 2
     f, axarr = plt.subplots(iterations, 10)
     k = 0
     for exp in range(iterations):
@@ -103,11 +104,11 @@ def main(args):
         k += 1
 
     import pickle
-    with open('results_mlvae_no_init_hid16_10iter.pkl', 'wb') as file:
+    with open('results_splitMNIST', 'wb') as file:
         pickle.dump(results, file)
     print(results)
     f.subplots_adjust(hspace=1.2)
-    plt.savefig("VAE_mlp_no_init_hid16_10iter")
+    plt.savefig("VAE_splitMNIST")
     plt.show()
 
 

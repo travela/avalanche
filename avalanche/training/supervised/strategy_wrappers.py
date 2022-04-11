@@ -391,7 +391,7 @@ class GenerativeReplay(SupervisedTemplate):
             plugins.append(rp)
 
         self.weighted_loss = weighted_loss
-        self.weights = [0, 0.8, 0.7, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1]
+        self.weights = [1, 0.8, 0.7, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1]
         super().__init__(
             model,
             optimizer,
@@ -409,7 +409,6 @@ class GenerativeReplay(SupervisedTemplate):
     def criterion(self):
         """Weighted Loss function according to the importance of new task."""
         if self.weighted_loss:
-            weights = [0, 0.8, 0.7, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1]
             data_memory_split_index = self.mb_output.shape[0]//2 if (
                 self.number_classes_until_now > 1) else self.train_mb_size
             data_loss = self.weights[(self.number_classes_until_now-1)] * \
@@ -501,7 +500,7 @@ class VAETraining(SupervisedTemplate):
                 self.experience.current_experience > 0) else self.train_mb_size
 
             self.x_hat, self.mean, self.logvar = self.mb_output
-            data_loss = (1/self.number_classes_until_now) * \
+            data_loss = self.weights[(self.number_classes_until_now-1)] * \
                 self._criterion(self.mb_x[:data_memory_split_index], 
                                 (self.x_hat[:data_memory_split_index], 
                                 self.mean[:data_memory_split_index],
@@ -509,7 +508,7 @@ class VAETraining(SupervisedTemplate):
                                 ) 
             replay_loss = 0
             if self.experience.current_experience > 0:
-                replay_loss = (1-(1/self.number_classes_until_now)) * \
+                replay_loss = (1-self.weights[(self.number_classes_until_now-1)]) * \
                     self._criterion(self.mb_x[data_memory_split_index:], 
                                     (self.x_hat[data_memory_split_index:], 
                                     self.mean[data_memory_split_index:], 

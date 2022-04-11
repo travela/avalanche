@@ -319,6 +319,7 @@ class GenerativeReplay(SupervisedTemplate):
         replay_size: int = None,
         increasing_replay_size: bool = False,
         weighted_loss: bool = False,
+        weights=None,
         **base_kwargs
     ):
         """
@@ -391,7 +392,10 @@ class GenerativeReplay(SupervisedTemplate):
             plugins.append(rp)
 
         self.weighted_loss = weighted_loss
-        self.weights = [1, 0.8, 0.7, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1]
+        if weights:
+            self.weights = weights
+        else:
+            self.weights = [1, 0.6, 0.55, 0.5, 0.45, 0.4, 0.3, 0.25, 0.2, 0.175]
         super().__init__(
             model,
             optimizer,
@@ -454,6 +458,7 @@ class VAETraining(SupervisedTemplate):
             ),
         eval_every=-1,
         weighted_loss: bool = False,
+        weights=None,
         **base_kwargs
     ):
         """
@@ -479,7 +484,10 @@ class VAETraining(SupervisedTemplate):
         """
         self.number_classes_until_now = 1
         self.weighted_loss = weighted_loss
-        self.weights = [1, 0.8, 0.7, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1]
+        if weights:
+            self.weights = weights
+        else:
+            self.weights = [1, 0.6, 0.55, 0.5, 0.45, 0.4, 0.3, 0.25, 0.2, 0.175]
         super().__init__(
             model,
             optimizer,

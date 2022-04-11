@@ -479,6 +479,7 @@ class VAETraining(SupervisedTemplate):
         """
         self.number_classes_until_now = 1
         self.weighted_loss = weighted_loss
+        self.weights = [1, 0.8, 0.7, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1]
         super().__init__(
             model,
             optimizer,

@@ -319,6 +319,8 @@ class GenerativeReplay(SupervisedTemplate):
         replay_size: int = None,
         increasing_replay_size: bool = False,
         weighted_loss: bool = False,
+        input_shape: tuple = (1, 28, 28),
+        nhid: int = 2,
         **base_kwargs
     ):
         """
@@ -355,7 +357,7 @@ class GenerativeReplay(SupervisedTemplate):
         else:
             # By default we use a fully-connected VAE as the generator.
             # model:
-            generator = MlpVAE((1, 28, 28), nhid=2, device=device)
+            generator = MlpVAE(input_shape, nhid=nhid, device=device)
             # optimzer:
             lr = 0.01
             from torch.optim import Adam

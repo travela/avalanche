@@ -116,7 +116,8 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         self.losses.append(self.losses_exp)
         if not self.untrained_solver:
             self.replay_statistics.append(self.replay_statistics_exp)
-        self.untrained_solver = False
+        if strategy.experience.current_experience == 84:
+            self.untrained_solver = False
 
     def before_training_epoch(self, strategy: "SupervisedTemplate",
                               **kwargs):

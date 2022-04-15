@@ -105,6 +105,11 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             self.old_model = deepcopy(strategy.model)
             self.old_model.eval()
         self.replay_statistics_exp = []
+        # Once we see different classes than in the first experience, 
+        # we start replaying data:
+        if (strategy.experience.classes_seen_so_far != 
+                strategy.experience.classes_in_this_experience):
+            self.untrained_solver = False
 
     def after_training_exp(self, strategy: "SupervisedTemplate",
                            num_workers: int = 0, shuffle: bool = True,
@@ -116,7 +121,10 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         self.losses.append(self.losses_exp)
         if not self.untrained_solver:
             self.replay_statistics.append(self.replay_statistics_exp)
-        if strategy.experience.current_experience == 84:
+        # Once we see different classes than in the first experience, 
+        # we start replaying data:
+        if (strategy.experience.classes_seen_so_far != 
+                strategy.experience.classes_in_this_experience):
             self.untrained_solver = False
 
     def before_training_epoch(self, strategy: "SupervisedTemplate",

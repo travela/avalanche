@@ -359,11 +359,11 @@ class GenerativeReplay(SupervisedTemplate):
             # model:
             generator = MlpVAE(input_shape, nhid=nhid, device=device)
             # optimzer:
-            lr = 0.001 
+            lr = 0.01 
             from torch.optim import Adam
             optimizer_generator = Adam(filter(
                 lambda p: p.requires_grad, generator.parameters()), lr=lr,
-                )
+                weight_decay=0.0001)
             # strategy (with plugin):
             self.generator_strategy = VAETraining(
                 model=generator, 

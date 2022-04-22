@@ -54,7 +54,8 @@ class GenerativeReplayPlugin(SupervisedPlugin):
 
     def __init__(self, generator_strategy: "BaseTemplate" = None, 
                  untrained_solver: bool = True, replay_size: int = None,
-                 increasing_replay_size: bool = False):
+                 increasing_replay_size: bool = False, 
+                 start_replay_from_exp: int = None):
         '''
         Init.
         '''
@@ -71,6 +72,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
 
         self.replay_statistics = []
         self.losses = []
+        self.start_replay_from_exp = start_replay_from_exp
 
     def before_training(self, strategy: "SupervisedTemplate", *args, **kwargs):
         """Checks whether we are using a user defined external generator 
@@ -96,6 +98,10 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         self.losses_exp = []
         # Once we see different classes than in the first experience, 
         # we start replaying data:
+        if(self.start_replay_from_exp):
+            if(strategy.experience.current_experience >= 
+               self.start_replay_from_exp):
+                self.untrained_solver = False
         if (strategy.experience.classes_seen_so_far != 
                 strategy.experience.classes_in_this_experience):
             self.untrained_solver = False

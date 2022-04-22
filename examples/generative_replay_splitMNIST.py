@@ -48,7 +48,7 @@ def main(args):
     )
 
     # --- SCENARIO CREATION
-    scenario = SplitMNIST(n_experiences=1, seed=1234)
+    scenario = SplitMNIST(n_experiences=10, seed=1234)
     # ---------
 
     # MODEL CREATION

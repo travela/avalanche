@@ -321,6 +321,7 @@ class GenerativeReplay(SupervisedTemplate):
         weighted_loss: bool = False,
         input_shape: tuple = (1, 28, 28),
         nhid: int = 2,
+        start_replay_from_exp: int = None,
         **base_kwargs
     ):
         """
@@ -374,6 +375,7 @@ class GenerativeReplay(SupervisedTemplate):
                 plugins=[GenerativeReplayPlugin(
                     replay_size=replay_size,
                     increasing_replay_size=increasing_replay_size,
+                    start_replay_from_exp=start_replay_from_exp
                     )],
                 weighted_loss=weighted_loss)
 
@@ -382,6 +384,7 @@ class GenerativeReplay(SupervisedTemplate):
             untrained_solver=untrained_solver,
             replay_size=replay_size,
             increasing_replay_size=increasing_replay_size,
+            start_replay_from_exp=start_replay_from_exp
             )
 
         tgp = TrainGeneratorAfterExpPlugin()

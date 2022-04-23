@@ -102,9 +102,9 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             if(strategy.experience.current_experience >= 
                self.start_replay_from_exp):
                 self.untrained_solver = False
-        if (strategy.experience.classes_seen_so_far != 
-                strategy.experience.classes_in_this_experience):
-            self.untrained_solver = False
+        # if (strategy.experience.classes_seen_so_far != 
+        #        strategy.experience.classes_in_this_experience):
+        #    self.untrained_solver = False
         if self.untrained_solver:
             # The solver needs to be trained before labelling generated data and
             # the generator needs to be trained before we can sample.

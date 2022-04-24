@@ -481,13 +481,8 @@ class VAETraining(SupervisedTemplate):
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
 
-
-<< << << < HEAD
-
-== == == =
         self.number_classes_until_now = 1
         self.weighted_loss = weighted_loss
->>>>>> > staging
         super().__init__(
             model,
             optimizer,
@@ -503,11 +498,6 @@ class VAETraining(SupervisedTemplate):
         )
 
     def criterion(self):
-<<<<<<< HEAD
-        """Adapt input to criterion as needed to compute reconstruction loss 
-        and KL divergence. See default criterion VAELoss."""
-        return self._criterion(self.mb_x, self.mb_output)
-=======
         """Weighted Loss function according to the importance of new task."""
         if self.weighted_loss:
             data_memory_split_index = self.mb_x.shape[0]//2 if (
@@ -531,7 +521,6 @@ class VAETraining(SupervisedTemplate):
             return data_loss + replay_loss
         else:
             return self._criterion(self.mb_x, self.mb_output)
->>>>>>> staging
 
 
 class GSS_greedy(SupervisedTemplate):

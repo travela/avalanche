@@ -15,7 +15,7 @@ on:
   push:
     branches:
       - master
-      - weighted_loss
+      - detection
     paths:
       - "**.py"
       - ".github/workflows/unit-test.yml"
@@ -23,7 +23,7 @@ on:
   pull_request:
     branches:
       - master
-      - weighted_loss
+      - detection
     paths:
       - "**.py"
       - ".github/workflows/unit-test.yml"

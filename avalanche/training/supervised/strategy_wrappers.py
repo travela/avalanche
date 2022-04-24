@@ -31,10 +31,11 @@ from avalanche.training.plugins import (
     CoPEPlugin,
     GSS_greedyPlugin,
     LFLPlugin,
+    MASPlugin
 )
 from avalanche.training.templates.base import BaseTemplate
 from avalanche.training.templates.supervised import SupervisedTemplate
-from avalanche.models.generator import VAE, VAE_loss
+from avalanche.models.generator import MlpVAE, VAE_loss
 from avalanche.logging import InteractiveLogger
 
 
@@ -313,6 +314,13 @@ class GenerativeReplay(SupervisedTemplate):
         evaluator: EvaluationPlugin = default_evaluator,
         eval_every=-1,
         generator_strategy: BaseTemplate = None,
+        untrained_solver: bool = True,
+        replay_size: int = None,
+        increasing_replay_size: bool = False,
+        weighted_loss: bool = False,
+        input_shape: tuple = (1, 28, 28),
+        nhid: int = 2,
+        start_replay_from_exp: int = None,
         **base_kwargs
     ):
         """
@@ -349,23 +357,34 @@ class GenerativeReplay(SupervisedTemplate):
         else:
             # By default we use a fully-connected VAE as the generator.
             # model:
-            generator = VAE((1, 28, 28), nhid=2, device=device)
+            generator = MlpVAE(input_shape, nhid=nhid, device=device)
             # optimzer:
-            lr = 0.01
+            lr = 0.01 
             from torch.optim import Adam
             optimizer_generator = Adam(filter(
                 lambda p: p.requires_grad, generator.parameters()), lr=lr,
-                 weight_decay=0.0001)
+                weight_decay=0.0001)
             # strategy (with plugin):
             self.generator_strategy = VAETraining(
                 model=generator, 
                 optimizer=optimizer_generator,
-                criterion=VAE_loss, train_mb_size=64, 
-                train_epochs=10,
-                eval_mb_size=32, device=device,
-                )
+                criterion=VAE_loss, train_mb_size=train_mb_size, 
+                train_epochs=train_epochs,
+                eval_mb_size=eval_mb_size, device=device,
+                plugins=[GenerativeReplayPlugin(
+                    replay_size=replay_size,
+                    increasing_replay_size=increasing_replay_size,
+                    start_replay_from_exp=start_replay_from_exp
+                    )],
+                weighted_loss=weighted_loss)
         self.trained_generators = []
-        rp = GenerativeReplayPlugin(generator=self.generator_strategy)
+        rp = GenerativeReplayPlugin(
+            generator_strategy=self.generator_strategy,
+            untrained_solver=untrained_solver,
+            replay_size=replay_size,
+            increasing_replay_size=increasing_replay_size,
+            start_replay_from_exp=start_replay_from_exp
+            )
 
         tgp = TrainGeneratorAfterExpPlugin()
 
@@ -375,6 +394,7 @@ class GenerativeReplay(SupervisedTemplate):
             plugins.append(tgp)
             plugins.append(rp)
 
+        self.weighted_loss = weighted_loss
         super().__init__(
             model,
             optimizer,
@@ -388,6 +408,24 @@ class GenerativeReplay(SupervisedTemplate):
             eval_every=eval_every,
             **base_kwargs
         )
+
+    def criterion(self):
+        """Weighted Loss function according to the importance of new task."""
+        if self.weighted_loss:
+            data_memory_split_index = self.mb_output.shape[0]//2 if (
+                self.number_classes_until_now > 1) else self.train_mb_size
+            data_loss = (1/self.number_classes_until_now) * \
+                self._criterion(self.mb_output[:data_memory_split_index], 
+                                self.mb_y[:data_memory_split_index])
+            replay_loss = 0
+            if self.number_classes_until_now > 1:
+                replay_loss = (1-(1/self.number_classes_until_now)) * \
+                    self._criterion(
+                        self.mb_output[data_memory_split_index:], 
+                        self.mb_y[data_memory_split_index:])
+            return data_loss + replay_loss
+        else:
+            return self._criterion(self.mb_output, self.mb_y)
 
 
 class VAETraining(SupervisedTemplate):
@@ -418,6 +456,7 @@ class VAETraining(SupervisedTemplate):
             suppress_warnings=True,
             ),
         eval_every=-1,
+        weighted_loss: bool = False,
         **base_kwargs
     ):
         """
@@ -442,6 +481,13 @@ class VAETraining(SupervisedTemplate):
             :class:`~avalanche.training.BaseTemplate` constructor arguments.
         """
 
+
+<< << << < HEAD
+
+== == == =
+        self.number_classes_until_now = 1
+        self.weighted_loss = weighted_loss
+>>>>>> > staging
         super().__init__(
             model,
             optimizer,
@@ -457,9 +503,35 @@ class VAETraining(SupervisedTemplate):
         )
 
     def criterion(self):
+<<<<<<< HEAD
         """Adapt input to criterion as needed to compute reconstruction loss 
         and KL divergence. See default criterion VAELoss."""
         return self._criterion(self.mb_x, self.mb_output)
+=======
+        """Weighted Loss function according to the importance of new task."""
+        if self.weighted_loss:
+            data_memory_split_index = self.mb_x.shape[0]//2 if (
+                self.experience.current_experience > 0) else self.train_mb_size
+
+            self.x_hat, self.mean, self.logvar = self.mb_output
+            data_loss = (1/self.number_classes_until_now) * \
+                self._criterion(self.mb_x[:data_memory_split_index], 
+                                (self.x_hat[:data_memory_split_index], 
+                                self.mean[:data_memory_split_index],
+                                self.logvar[:data_memory_split_index]) 
+                                ) 
+            replay_loss = 0
+            if self.experience.current_experience > 0:
+                replay_loss = (1-(1/self.number_classes_until_now)) * \
+                    self._criterion(self.mb_x[data_memory_split_index:], 
+                                    (self.x_hat[data_memory_split_index:], 
+                                    self.mean[data_memory_split_index:], 
+                                    self.logvar[data_memory_split_index:]) 
+                                    )
+            return data_loss + replay_loss
+        else:
+            return self._criterion(self.mb_x, self.mb_output)
+>>>>>>> staging
 
 
 class GSS_greedy(SupervisedTemplate):
@@ -1102,6 +1174,84 @@ class LFL(SupervisedTemplate):
         )
 
 
+class MAS(SupervisedTemplate):
+    """Memory Aware Synapses (MAS) strategy.
+
+    See MAS plugin for details.
+    This strategy does not use task identities.
+    """
+
+    def __init__(
+        self,
+        model: Module,
+        optimizer: Optimizer,
+        criterion,
+        lambda_reg: float = 1.,
+        alpha: float = 0.5,
+        verbose: bool = False,
+        train_mb_size: int = 1,
+        train_epochs: int = 1,
+        eval_mb_size: int = 1,
+        device=None,
+        plugins: Optional[List[SupervisedPlugin]] = None,
+        evaluator: EvaluationPlugin = default_evaluator,
+        eval_every=-1,
+        **base_kwargs
+    ):
+        """Init.
+
+        :param model: The model.
+        :param optimizer: The optimizer to use.
+        :param criterion: The loss criterion to use.
+        :param lambda_reg: hyperparameter weighting the penalty term
+               in the overall loss.
+        :param alpha: hyperparameter that specifies the weight given
+               to the influence of the previous experience.
+        :param verbose: when True, the computation of the influence of
+               each parameter shows a progress bar.
+        :param train_mb_size: The train minibatch size. Defaults to 1.
+        :param train_epochs: The number of training epochs. Defaults to 1.
+        :param eval_mb_size: The eval minibatch size. Defaults to 1.
+        :param device: The device to use. Defaults to None (cpu).
+        :param plugins: Plugins to be added. Defaults to None.
+        :param evaluator: (optional) instance of EvaluationPlugin for logging
+            and metric computations.
+        :param eval_every: the frequency of the calls to `eval` inside the
+            training loop. -1 disables the evaluation. 0 means `eval` is called
+            only at the end of the learning experience. Values >0 mean that
+            `eval` is called every `eval_every` epochs and at the end of the
+            learning experience.
+        :param **base_kwargs: any additional
+            :class:`~avalanche.training.BaseTemplate` constructor arguments.
+        """
+
+        # Instantiate plugin
+        mas = MASPlugin(
+            lambda_reg=lambda_reg,
+            alpha=alpha,
+            verbose=verbose)
+
+        # Add plugin to the strategy
+        if plugins is None:
+            plugins = [mas]
+        else:
+            plugins.append(mas)
+
+        super().__init__(
+            model,
+            optimizer,
+            criterion,
+            train_mb_size=train_mb_size,
+            train_epochs=train_epochs,
+            eval_mb_size=eval_mb_size,
+            device=device,
+            plugins=plugins,
+            evaluator=evaluator,
+            eval_every=eval_every,
+            **base_kwargs
+        )
+
+
 __all__ = [
     "Naive",
     "PNNStrategy",
@@ -1118,4 +1268,5 @@ __all__ = [
     "GSS_greedy",
     "CoPE",
     "LFL",
+    "MAS"
 ]

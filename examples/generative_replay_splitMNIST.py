@@ -3,8 +3,8 @@
 # Copyrights licensed under the MIT License.                                   #
 # See the accompanying LICENSE file for terms.                                 #
 #                                                                              #
-# Date: 12-10-2020                                                             #
-# Author(s): Vincenzo Lomonaco                                                 #
+# Date: 01-04-2022                                                             #
+# Author(s): Florian Mies                                                      #
 # E-mail: contact@continualai.org                                              #
 # Website: avalanche.continualai.org                                           #
 ################################################################################
@@ -16,7 +16,10 @@ This is a simple example on how to use the Replay strategy.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
+# TO RUN LOCALLY
+import sys
+sys.path.append("/home/florian/university/WS2021/ma/avalanche/fork/avalanche")
+# REMOVE AFTER DEBUGGING
 
 import argparse
 import torch
@@ -43,21 +46,6 @@ def main(args):
         if torch.cuda.is_available() and args.cuda >= 0
         else "cpu"
     )
-    n_batches = 5
-    # ---------
-
-    # --- TRANSFORMATIONS
-    train_transform = transforms.Compose(
-        [
-            RandomCrop(28, padding=4),
-            ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,)),
-        ]
-    )
-    test_transform = transforms.Compose(
-        [ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
-    )
-    # ---------
 
     # --- SCENARIO CREATION
     scenario = SplitMNIST(n_experiences=10, seed=1234)
@@ -93,14 +81,39 @@ def main(args):
     # TRAINING LOOP
     print("Starting experiment...")
     results = []
-    for experience in scenario.train_stream:
-        print("Start of experience ", experience.current_experience)
-        cl_strategy.train(experience)
-        print("Training completed")
 
-        print("Computing accuracy on the whole test set")
-        results.append(cl_strategy.eval(scenario.test_stream))
+    import matplotlib.pyplot as plt
+    import numpy as np
+    iterations = 10
+    f, axarr = plt.subplots(iterations, 10)
+    k = 0
+    for exp in range(iterations):
+        print("Start of experience ",
+              exp)
+        # Reinit solver after each exp
+        # cl_strategy.model = SimpleMLP(num_classes=scenario.n_classes)
+        cl_strategy.train(scenario.train_stream[0])
+        results.append(cl_strategy.eval(scenario.test_stream[0]))
+        samples = cl_strategy.generator_strategy.model.generate(10)
+        samples = samples.detach().cpu().numpy()
+        for j in range(10):
+            axarr[k, j].imshow(samples[j, 0], cmap="gray")
+            axarr[k, 4].set_title("Generated images for experience " + str(k))
+        np.vectorize(lambda ax: ax.axis('off'))(axarr)
+        k += 1
 
+    import pickle
+    with open('results_mlvae_no_init_hid16_10iter.pkl', 'wb') as file:
+        pickle.dump(results, file)
+    print(results)
+    f.subplots_adjust(hspace=1.2)
+    plt.savefig("VAE_mlp_no_init_hid16_10iter")
+    plt.show()
+
+
+""" import pickle
+with open("results.pkl", 'rb') as f:
+    res = pickle.load(f) """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

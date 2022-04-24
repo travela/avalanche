@@ -15,9 +15,8 @@ All plugins related to Generative Replay.
 """
 
 from copy import deepcopy
-from avalanche.benchmarks.utils.data_loader import ReplayDataLoader
-from avalanche.benchmarks.utils import AvalancheDataset
 from avalanche.core import SupervisedPlugin
+from avalanche.training.templates.base import BaseTemplate
 from avalanche.training.templates.supervised import SupervisedTemplate
 import torch
 
@@ -26,13 +25,9 @@ class GenerativeReplayPlugin(SupervisedPlugin):
     """
     Experience generative replay plugin.
 
-    Updates the Dataloader of a strategy before training an experience
-    by sampling a generator model and weaving the replay data into
-    the original training data. 
-
-    The examples in the created mini-batch contain one part of the original data
-    and one part of generative data for each class 
-    that has been encountered so far.
+    Updates the current mbatch of a strategy before training an experience
+    by sampling a generator model and concatenating the replay data to the 
+    current batch. 
 
     In this version of the plugin the number of replay samples is 
     increased with each new experience. Another way to implempent 
@@ -40,50 +35,52 @@ class GenerativeReplayPlugin(SupervisedPlugin):
     importance to the replayed data as the number of experiences 
     increases. This will be implemented as an option for the user soon.
 
-    :param batch_size: the size of the data batch. If set to `None`, it
-        will be set equal to the strategy's batch size.
-    :param batch_size_mem: the size of the memory batch. If
-        `task_balanced_dataloader` is set to True, it must be greater than or
-        equal to the number of tasks. If its value is set to `None`
-        (the default value), it will be automatically set equal to the
-        data batch size.
-    :param task_balanced_dataloader: if True, buffer data loaders will be
-            task-balanced, otherwise it will create a single dataloader for the
-            buffer samples.
+    :param generator_strategy: In case the plugin is applied to a non-generative
+     model (e.g. a simple classifier), this should contain an Avalanche strategy 
+     for a model that implements a 'generate' method 
+     (see avalanche.models.generator.Generator). Defaults to None.
     :param untrained_solver: if True we assume this is the beginning of 
         a continual learning task and add replay data only from the second 
         experience onwards, otherwise we sample and add generative replay data
         before training the first experience. Default to True.
+    :param replay_size: The user can specify the batch size of replays that 
+        should be added to each data batch. By default each data batch will be 
+        matched with replays of the same number.
+    :param increasing_replay_size: If set to True, each experience this will 
+        double the amount of replay data added to each data batch. The effect 
+        will be that the older experiences will gradually increase in importance
+        to the final loss.
     """
 
-    def __init__(self, generator=None, mem_size: int = 200, 
-                 batch_size: int = None,
-                 batch_size_mem: int = None,
-                 task_balanced_dataloader: bool = False,
-                 untrained_solver: bool = True):
+    def __init__(self, generator_strategy: "BaseTemplate" = None, 
+                 untrained_solver: bool = True, replay_size: int = None,
+                 increasing_replay_size: bool = False, 
+                 start_replay_from_exp: int = None):
         '''
         Init.
         '''
         super().__init__()
-        self.mem_size = mem_size
-        self.batch_size = batch_size
-        self.batch_size_mem = batch_size_mem
-        self.task_balanced_dataloader = task_balanced_dataloader
-        self.generator_strategy = generator
+        self.generator_strategy = generator_strategy
         if self.generator_strategy:
-            self.generator = generator.model
+            self.generator = generator_strategy.model
         else: 
             self.generator = None
         self.untrained_solver = untrained_solver
         self.model_is_generator = False
+        self.replay_size = replay_size
+        self.increasing_replay_size = increasing_replay_size
 
         self.replay_statistics = []
+        self.losses = []
+        self.start_replay_from_exp = start_replay_from_exp
 
     def before_training(self, strategy: "SupervisedTemplate", *args, **kwargs):
         """Checks whether we are using a user defined external generator 
         or we use the strategy's model as the generator. 
         If the generator is None after initialization 
-        we assume that strategy.model is the generator."""
+        we assume that strategy.model is the generator.
+        (e.g. this would be the case when training a VAE with 
+        generative replay)"""
         if not self.generator_strategy:
             self.generator_strategy = strategy
             self.generator = strategy.model
@@ -98,7 +95,16 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         # For weighted loss criterion: store the number of classes seen so far
         strategy.number_classes_until_now = len(
             set(strategy.experience.classes_seen_so_far))
-
+        self.losses_exp = []
+        # Once we see different classes than in the first experience, 
+        # we start replaying data:
+        if(self.start_replay_from_exp):
+            if(strategy.experience.current_experience >= 
+               self.start_replay_from_exp):
+                self.untrained_solver = False
+        # if (strategy.experience.classes_seen_so_far != 
+        #        strategy.experience.classes_in_this_experience):
+        #    self.untrained_solver = False
         if self.untrained_solver:
             # The solver needs to be trained before labelling generated data and
             # the generator needs to be trained before we can sample.
@@ -118,9 +124,23 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         Set untrained_solver boolean to False after (the first) experience,
         in order to start training with replay data from the second experience.
         """
+        self.losses.append(self.losses_exp)
         if not self.untrained_solver:
             self.replay_statistics.append(self.replay_statistics_exp)
-        self.untrained_solver = False
+
+    def before_training_epoch(self, strategy: "SupervisedTemplate",
+                              **kwargs):
+        """
+        Initializing empty list to stay losses of epoch.
+        """
+        self.losses_epoch = []
+
+    def after_training_epoch(self, strategy: "SupervisedTemplate",
+                             **kwargs):
+        """
+        Appending losses of epoch to list of losses of current experience.
+        """
+        self.losses_exp.append(self.losses_epoch)
 
     def before_training_iteration(self, strategy: "SupervisedTemplate",
                                   **kwargs):
@@ -132,12 +152,21 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             # The solver needs to be trained before labelling generated data and
             # the generator needs to be trained before we can sample.
             return
+        # determine how many replay data points to generate
+        if self.replay_size:
+            number_replays_to_generate = self.replay_size
+        else:
+            if self.increasing_replay_size:
+                number_replays_to_generate = len(
+                    strategy.mbatch[0]) * (
+                        strategy.experience.current_experience)
+            else:
+                number_replays_to_generate = len(strategy.mbatch[0])
         # extend X with replay data
         replay = []
         for g in strategy.trained_generators:
             replay.append(g.generate(
-                (strategy.train_mb_size // len(strategy.trained_generators)) *
-                (strategy.experience.current_experience)
+                (number_replays_to_generate // len(strategy.trained_generators))
             ).to(strategy.device))
         replay = torch.cat(replay)  
         strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
@@ -156,6 +185,13 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]],
              dim=0)
 
+    def after_training_iteration(self, strategy: "SupervisedTemplate",
+                                 **kwargs):
+        """
+        Adding the loss of current iteration to th elist of losses of the epoch.
+        """
+        self.losses_epoch.append(strategy.loss.item())
+
 
 class TrainGeneratorAfterExpPlugin(SupervisedPlugin):
     """
@@ -169,6 +205,8 @@ class TrainGeneratorAfterExpPlugin(SupervisedPlugin):
         The training method expects an Experience object 
         with a 'dataset' parameter.
         """
-        print("Start training of Replay Generator.")
-        strategy.plugins[1].generator_strategy.train(strategy.experience) 
-        print("End training of Replay Generator.")
+        for plugin in strategy.plugins:
+            if type(plugin) is GenerativeReplayPlugin:
+                print("Start training of Replay Generator.")
+                plugin.generator_strategy.train(strategy.experience) 
+                print("End training of Replay Generator.")

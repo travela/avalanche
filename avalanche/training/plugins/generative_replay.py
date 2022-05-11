@@ -130,39 +130,40 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             self.replay_statistics.append(self.replay_statistics_exp)
         # Generate some samples for each class:
 
-        replay = self.generator.generate(50).to(strategy.device)  
-        with torch.no_grad():
-            replay_output = strategy.model(replay).argmax(dim=-1)
+        if not self.model_is_generator:
+            replay = self.generator.generate(50).to(strategy.device)  
+            with torch.no_grad():
+                replay_output = strategy.model(replay).argmax(dim=-1)
 
-            # Determine how many samples per class we would like to have
-            expected_num_samples_per_class = 5
-            # Check for each class if enough samples were generated
-            for class_name in set(
-                    strategy.experience.classes_seen_so_far):
-                # There should be an additional stopping criterion 
-                # (e.g. max expected_num_samples_per_class iterations)
-                balance_replay_iter = 0
-                while (sum(replay_output == class_name)
-                        < expected_num_samples_per_class
-                       ) and (balance_replay_iter
-                              < 10):
-                    replay = torch.cat([replay, self.generator.generate(50)
-                                        .to(strategy.device)])
-                    replay_output = strategy.model(replay).argmax(dim=-1)
-                    balance_replay_iter += 1
-            # Keep only a fix amount of samples per class
-            replay_samples_exp = []
-            replay_samples_lables_exp = []
-            for class_name in set(strategy.experience.classes_seen_so_far):
-                replay_samples_exp.extend(
-                    replay[
-                        replay_output == class_name]
-                    [:expected_num_samples_per_class])
-                replay_samples_lables_exp.extend(
-                    replay_output[replay_output == class_name]
-                    [:expected_num_samples_per_class])
-            self.replay_samples.append(replay_samples_exp)
-            self.replay_samples_lables.append(replay_samples_lables_exp)
+                # Determine how many samples per class we would like to have
+                expected_num_samples_per_class = 5
+                # Check for each class if enough samples were generated
+                for class_name in set(
+                        strategy.experience.classes_seen_so_far):
+                    # There should be an additional stopping criterion 
+                    # (e.g. max expected_num_samples_per_class iterations)
+                    balance_replay_iter = 0
+                    while (sum(replay_output == class_name)
+                            < expected_num_samples_per_class
+                           ) and (balance_replay_iter
+                                  < 10):
+                        replay = torch.cat([replay, self.generator.generate(50)
+                                            .to(strategy.device)])
+                        replay_output = strategy.model(replay).argmax(dim=-1)
+                        balance_replay_iter += 1
+                # Keep only a fix amount of samples per class
+                replay_samples_exp = []
+                replay_samples_lables_exp = []
+                for class_name in set(strategy.experience.classes_seen_so_far):
+                    replay_samples_exp.extend(
+                        replay[
+                            replay_output == class_name]
+                        [:expected_num_samples_per_class])
+                    replay_samples_lables_exp.extend(
+                        replay_output[replay_output == class_name]
+                        [:expected_num_samples_per_class])
+                self.replay_samples.append(replay_samples_exp)
+                self.replay_samples_lables.append(replay_samples_lables_exp)
 
     def before_training_epoch(self, strategy: "SupervisedTemplate",
                               **kwargs):

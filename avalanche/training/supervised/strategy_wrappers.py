@@ -322,7 +322,7 @@ class GenerativeReplay(SupervisedTemplate):
         weighted_loss: bool = False,
         input_shape: tuple = (1, 28, 28),
         nhid: int = 2,
-        start_replay_from_exp: int = None,
+        start_replay_from_exp: int = 1,
         **base_kwargs
     ):
         """

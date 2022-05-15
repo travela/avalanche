@@ -308,6 +308,7 @@ class GenerativeReplay(SupervisedTemplate):
         criterion=CrossEntropyLoss(),
         train_mb_size: int = 1,
         train_epochs: int = 1,
+        train_epochs_generator: int = None,
         eval_mb_size: int = None,
         device=None,
         plugins: Optional[List[SupervisedPlugin]] = None,
@@ -320,7 +321,7 @@ class GenerativeReplay(SupervisedTemplate):
         weighted_loss: bool = False,
         input_shape: tuple = (1, 28, 28),
         nhid: int = 2,
-        start_replay_from_exp: int = None,
+        start_replay_from_exp: int = 1,
         **base_kwargs
     ):
         """
@@ -369,7 +370,9 @@ class GenerativeReplay(SupervisedTemplate):
                 model=generator, 
                 optimizer=optimizer_generator,
                 criterion=VAE_loss, train_mb_size=train_mb_size, 
-                train_epochs=train_epochs,
+                train_epochs=(
+                    train_epochs_generator if train_epochs_generator 
+                    else train_epochs),
                 eval_mb_size=eval_mb_size, device=device,
                 plugins=[GenerativeReplayPlugin(
                     replay_size=replay_size,

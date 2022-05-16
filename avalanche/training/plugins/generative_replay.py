@@ -199,16 +199,16 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             with torch.no_grad():
                 # Compare using the known correct class labels 
                 # versus the ones the solver outputs:
-                replay_output = self.old_model(replay).argmax(dim=-1)
+                # replay_output = self.old_model(replay).argmax(dim=-1)
 
                 # Making use that we know we have 10 exps of one class each:
-                """                 replay_output = []
+                replay_output = []
                 for idx in range(len(strategy.trained_generators)):
                     replay_output.append(
                         torch.ones((number_replays_to_generate // len(
                             strategy.trained_generators)), dtype=int) 
                         * strategy.experience.classes_seen_so_far[idx])
-                replay_output = torch.cat(replay_output) """
+                replay_output = torch.cat(replay_output)
                 self.replay_statistics_exp.extend(replay_output)
         else:
             # Mock labels:

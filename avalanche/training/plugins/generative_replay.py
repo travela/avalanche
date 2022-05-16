@@ -129,42 +129,23 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         self.losses.append(self.losses_exp)
         if not self.untrained_solver:
             self.replay_statistics.append(self.replay_statistics_exp)
-        # Generate some samples for each class:
 
         if not self.model_is_generator:
-            replay = self.generator.generate(50).to(strategy.device)  
-            with torch.no_grad():
-                replay_output = strategy.model(replay).argmax(dim=-1)
+            # Generate some samples for each class:
 
-                # Determine how many samples per class we would like to have
-                expected_num_samples_per_class = 5
-                # Check for each class if enough samples were generated
-                for class_name in set(
-                        strategy.experience.classes_seen_so_far):
-                    # There should be an additional stopping criterion 
-                    # (e.g. max expected_num_samples_per_class iterations)
-                    balance_replay_iter = 0
-                    while (sum(replay_output == class_name)
-                            < expected_num_samples_per_class
-                           ) and (balance_replay_iter
-                                  < 10):
-                        replay = torch.cat([replay, self.generator.generate(50)
-                                            .to(strategy.device)])
-                        replay_output = strategy.model(replay).argmax(dim=-1)
-                        balance_replay_iter += 1
-                # Keep only a fix amount of samples per class
-                replay_samples_exp = []
-                replay_samples_lables_exp = []
-                for class_name in set(strategy.experience.classes_seen_so_far):
-                    replay_samples_exp.extend(
-                        replay[
-                            replay_output == class_name]
-                        [:expected_num_samples_per_class])
-                    replay_samples_lables_exp.extend(
-                        replay_output[replay_output == class_name]
-                        [:expected_num_samples_per_class])
-                self.replay_samples.append(replay_samples_exp)
-                self.replay_samples_lables.append(replay_samples_lables_exp)
+            # Determine how many samples per class we would like to have
+            expected_num_samples_per_class = 5
+            replay_samples_exp = []
+            replay_samples_lables_exp = []
+            for idx, g in enumerate(strategy.trained_generators):
+                replay_samples_exp.extend(
+                    g.generate(expected_num_samples_per_class))
+                replay_samples_lables_exp.extend(
+                    [strategy.experience.classes_seen_so_far[idx]] *
+                    expected_num_samples_per_class)
+
+            self.replay_samples.append(replay_samples_exp)
+            self.replay_samples_lables.append(replay_samples_lables_exp)
 
     def before_training_epoch(self, strategy: "SupervisedTemplate",
                               **kwargs):
@@ -211,7 +192,18 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         # extend y with predicted labels (or mock labels if model==generator)
         if not self.model_is_generator:
             with torch.no_grad():
-                replay_output = self.old_model(replay).argmax(dim=-1)
+                # Compare using the known correct class labels 
+                # versus the ones the solver outputs:
+                # replay_output = self.old_model(replay).argmax(dim=-1)
+
+                # Making use that we know we have 10 exps of one class each:
+                replay_output = []
+                for idx in range(len(strategy.trained_generators)):
+                    replay_output.append(
+                        torch.ones((number_replays_to_generate // len(
+                            strategy.trained_generators)), dtype=int) 
+                        * strategy.experience.classes_seen_so_far[idx])
+                replay_output = torch.cat(replay_output)
                 self.replay_statistics_exp.extend(replay_output)
         else:
             # Mock labels:

@@ -374,12 +374,10 @@ class GenerativeReplay(SupervisedTemplate):
                     train_epochs_generator if train_epochs_generator 
                     else train_epochs),
                 eval_mb_size=eval_mb_size, device=device,
-                plugins=[GenerativeReplayPlugin(
-                    replay_size=replay_size,
-                    increasing_replay_size=increasing_replay_size,
-                    start_replay_from_exp=start_replay_from_exp
-                    )],
-                weighted_loss=weighted_loss)
+                # We train the generator without GR 
+                # (as each generator only learns a single class)
+                # Therefore weighted_loss is always False
+                weighted_loss=False) 
         self.trained_generators = []
         rp = GenerativeReplayPlugin(
             generator_strategy=self.generator_strategy,

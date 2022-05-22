@@ -55,7 +55,8 @@ class GenerativeReplayPlugin(SupervisedPlugin):
     def __init__(self, generator_strategy: "BaseTemplate" = None, 
                  untrained_solver: bool = True, replay_size: int = None,
                  increasing_replay_size: bool = False, 
-                 start_replay_from_exp: int = None):
+                 start_replay_from_exp: int = None, 
+                 GR_over_itself: bool = False):
         '''
         Init.
         '''
@@ -69,6 +70,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         self.model_is_generator = False
         self.replay_size = replay_size
         self.increasing_replay_size = increasing_replay_size
+        self.GR_over_itself = GR_over_itself
 
         self.replay_statistics = []
         self.losses = []
@@ -201,8 +203,11 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                 number_replays_to_generate = len(strategy.mbatch[0])
         # extend X with replay data
         replay = self.old_generator.generate(number_replays_to_generate
-                                             ).to(strategy.device)  
-        strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
+                                             ).to(strategy.device)
+        if GR_over_itself:
+            strategy.mbatch[0] = replay
+        else:      
+            strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
         # extend y with predicted labels (or mock labels if model==generator)
         if not self.model_is_generator:
             with torch.no_grad():
@@ -211,12 +216,17 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         else:
             # Mock labels:
             replay_output = torch.zeros(replay.shape[0])
-        strategy.mbatch[1] = torch.cat(
-            [strategy.mbatch[1], replay_output.to(strategy.device)], dim=0)
-        # extend task id batch (we implicitley assume a task-free case)
-        strategy.mbatch[-1] = torch.cat([strategy.mbatch[-1], torch.ones(
-            replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]],
-             dim=0)
+        if GR_over_itself:
+            strategy.mbatch[1] = replay_output.to(strategy.device)
+            strategy.mbatch[-1] = torch.ones(
+                replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]
+        else:
+            strategy.mbatch[1] = torch.cat(
+                [strategy.mbatch[1], replay_output.to(strategy.device)], dim=0)
+            # extend task id batch (we implicitley assume a task-free case)
+            strategy.mbatch[-1] = torch.cat([strategy.mbatch[-1], torch.ones(
+                replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]],
+                dim=0)
 
     def after_training_iteration(self, strategy: "SupervisedTemplate",
                                  **kwargs):

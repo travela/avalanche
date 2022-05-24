@@ -204,7 +204,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         # extend X with replay data
         replay = self.old_generator.generate(number_replays_to_generate
                                              ).to(strategy.device)
-        if GR_over_itself:
+        if self.GR_over_itself:
             strategy.mbatch[0] = replay
         else:      
             strategy.mbatch[0] = torch.cat([strategy.mbatch[0], replay], dim=0)
@@ -216,7 +216,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
         else:
             # Mock labels:
             replay_output = torch.zeros(replay.shape[0])
-        if GR_over_itself:
+        if self.GR_over_itself:
             strategy.mbatch[1] = replay_output.to(strategy.device)
             strategy.mbatch[-1] = torch.ones(
                 replay.shape[0]).to(strategy.device) * strategy.mbatch[-1][0]

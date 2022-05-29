@@ -115,9 +115,10 @@ class GenerativeReplayPlugin(SupervisedPlugin):
             return
         self.old_generator = deepcopy(self.generator)
         self.old_generator.eval()
-        if not self.model_is_generator:
-            self.old_model = deepcopy(strategy.model)
-            self.old_model.eval()
+        # For GR over itself we manually set the old model. 
+        # if not self.model_is_generator:
+        #    self.old_model = deepcopy(strategy.model)
+        #    self.old_model.eval()
         self.replay_statistics_exp = []
 
     def after_training_exp(self, strategy: "SupervisedTemplate",

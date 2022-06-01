@@ -139,7 +139,7 @@ class GenerativeReplayPlugin(SupervisedPlugin):
                 replay_output = strategy.model(replay).argmax(dim=-1)
 
                 # Determine how many samples per class we would like to have
-                expected_num_samples_per_class = 5
+                expected_num_samples_per_class = 1
                 # Check for each class if enough samples were generated
                 for class_name in set(
                         strategy.experience.classes_seen_so_far):
